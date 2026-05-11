@@ -3,6 +3,7 @@
 A Django-based academic analytics platform designed to manage student records, analyze performance, track backlogs, and generate NBA metrics reports.
 
 ---
+## LIVE DEMO: https://college-result-analytics.onrender.com
 
 ## 🚀 Project Overview
 
