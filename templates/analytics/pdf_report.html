@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Result Analytics — Summary Report</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Calibri', 'Arial', sans-serif;
+    font-size: 10pt;
+    color: #111;
+    background: #fff;
+    padding: 0;
+  }
+
+  .print-note {
+    background: #FFF3CD;
+    border: 1px solid #F5A264;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 9pt;
+  }
+
+  .report-sheet {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+    background: #fff;
+  }
+
+  /* Header */
+  .inst-header {
+    width: 100%;
+    display: table;
+    margin-bottom: 12px;
+    border-bottom: 1.5px solid #cfcfcf;
+    padding-bottom: 10px;
+  }
+
+  .logo-cell {
+    display: table-cell;
+    width: 80px;
+    vertical-align: middle;
+  }
+
+  .logo-cell img {
+    width: 68px;
+    height: 68px;
+  }
+
+  .header-text-cell {
+    display: table-cell;
+    text-align: center;
+    vertical-align: middle;
+    padding: 0 10px;
+  }
+
+  .spacer-cell {
+    display: table-cell;
+    width: 80px;
+  }
+
+  .jai {
+    font-size: 8.5pt;
+    color: #7a1f37;
+    margin-bottom: 2px;
+    font-weight: bold;
+  }
+
+  .trust {
+    font-size: 9pt;
+    color: #666;
+    font-style: italic;
+    margin-bottom: 2px;
+  }
+
+  .inst-name {
+    font-size: 18pt;
+    font-weight: bold;
+    color: #1f6fbf;
+    margin-bottom: 3px;
+    letter-spacing: .2px;
+  }
+
+  .inst-sub {
+    font-size: 8.8pt;
+    color: #444;
+    margin-bottom: 2px;
+  }
+
+  .inst-addr {
+    font-size: 8.5pt;
+    color: #555;
+  }
+
+  /* Report title */
+  .report-title {
+    text-align: center;
+    font-size: 13pt;
+    font-weight: bold;
+    color: #111;
+    margin: 8px 0 2px;
+    letter-spacing: .2px;
+  }
+
+  .report-subtitle {
+    text-align: center;
+    font-size: 10pt;
+    color: #555;
+    margin-bottom: 14px;
+  }
+
+  /* Ref line */
+  .ref-line {
+    width: 100%;
+    display: table;
+    margin-bottom: 16px;
+    font-size: 9.4pt;
+    color: #333;
+  }
+
+  .ref-left,
+  .ref-right {
+    display: table-cell;
+    width: 50%;
+    vertical-align: middle;
+    padding: 2px 0;
+  }
+
+  .ref-left { text-align: left; }
+  .ref-right { text-align: right; }
+
+  /* Section title */
+  .sec-heading {
+    font-size: 10.2pt;
+    font-weight: bold;
+    color: #7a1f37;
+    margin: 14px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #d9577a;
+  }
+
+  /* Table */
+  table.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.3pt;
+    margin-bottom: 14px;
+  }
+
+  table.report-table thead th {
+    background: #faf4f7;
+    color: #222;
+    padding: 7px 6px;
+    text-align: center;
+    font-size: 8.5pt;
+    font-weight: bold;
+    border-bottom: 1.5px solid #d9577a;
+  }
+
+  table.report-table tbody td {
+    padding: 7px 6px;
+    text-align: center;
+    border-bottom: 1px solid #ececec;
+  }
+
+  table.report-table tbody tr:nth-child(even) {
+    background: #fcfcfc;
+  }
+
+  table.report-table tbody tr.topper-row {
+    background: #f3fff5;
+  }
+
+  table.report-table tbody tr.fail-row {
+    background: #fff6f6;
+  }
+
+  .tl {
+    text-align: left !important;
+  }
+
+  .pass-text {
+    color: #2E8B57;
+    font-weight: bold;
+  }
+
+  .fail-text {
+    color: #C0392B;
+    font-weight: bold;
+  }
+
+  .gold-text {
+    color: #B8860B;
+    font-weight: bold;
+  }
+
+  .silver-text {
+    color: #666;
+    font-weight: bold;
+  }
+
+  .bronze-text {
+    color: #8B4513;
+    font-weight: bold;
+  }
+
+  /* Note */
+  .note-text {
+    font-size: 8.4pt;
+    color: #666;
+    font-style: italic;
+    margin-top: 6px;
+    margin-bottom: 34px;
+    line-height: 1.5;
+  }
+
+  /* Signature */
+  .signature-row {
+    width: 100%;
+    display: table;
+    margin-bottom: 18px;
+  }
+
+  .sig-spacer {
+    display: table-cell;
+  }
+
+  .sig-right {
+    display: table-cell;
+    width: 250px;
+    text-align: center;
+    vertical-align: bottom;
+  }
+
+  .seal-box {
+    width: 82px;
+    height: 56px;
+    border: 1px dashed #d6a17d;
+    border-radius: 4px;
+    margin: 0 auto 18px auto;
+    font-size: 7.5pt;
+    color: #b77855;
+    display: table;
+  }
+
+  .seal-inner {
+    display: table-cell;
+    vertical-align: middle;
+    text-align: center;
+  }
+
+  .sig-line {
+    border-top: 1px solid #333;
+    width: 180px;
+    margin: 0 auto 4px auto;
+    padding-top: 5px;
+    font-size: 9pt;
+    color: #111;
+    font-weight: bold;
+  }
+
+  .sig-sub {
+    font-size: 8pt;
+    color: #555;
+  }
+
+  /* Footer */
+  .page-footer {
+    border-top: 1px solid #d9d9d9;
+    padding-top: 6px;
+    display: table;
+    width: 100%;
+    font-size: 8.3pt;
+    color: #666;
+    margin-top: 8px;
+  }
+
+  .footer-left {
+    display: table-cell;
+    text-align: left;
+  }
+
+  .footer-right {
+    display: table-cell;
+    text-align: right;
+  }
+
+  @media print {
+    .print-note { display: none; }
+    body { padding: 0; }
+    .report-sheet { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+{% if print_mode %}
+<div class="print-note">
+  <strong>Tip:</strong> Install <code>pip install xhtml2pdf</code> for auto PDF, or press <strong>Ctrl+P → Save as PDF</strong>.
+</div>
+{% endif %}
+
+<div class="report-sheet">
+
+  <!-- Institutional Header with Logo -->
+  <div class="inst-header">
+    <div class="logo-cell">
+      <img src="{% static 'sjbit_logo.png' %}" alt="Institute Logo">
+    </div>
+
+    <div class="header-text-cell">
+      <div class="jai">|| Jai Sri Gurudev ||</div>
+      <div class="trust">Sri Adichunchanagiri Shikshana Trust (R.)</div>
+      <div class="inst-name">SJB Institute of Technology</div>
+      <div class="inst-sub">Affiliated to Visveswaraya Technological University, Belagavi &amp; Approved by AICTE, New Delhi</div>
+      <div class="inst-addr">No. 67, Uttarahalli Road, Adjacent to Abhiman Studio, Kengeri, Bangalore South - 560 060</div>
+    </div>
+
+    <div class="spacer-cell"></div>
+  </div>
+
+  <div class="report-title">CONSOLIDATED BRANCH &amp; SEMESTER RESULT ANALYSIS REPORT</div>
+  <div class="report-subtitle">Academic Performance Summary</div>
+
+  <div class="ref-line">
+    <div class="ref-left"><strong>Ref No:</strong> SJBIT/EXAM/RA/{% now "Y" %}/001</div>
+    <div class="ref-right"><strong>Date:</strong> {% now "d/m/Y" %}</div>
+  </div>
+
+  <!-- Branch & Semester Summary -->
+  <div class="sec-heading">Branch &amp; Semester — Performance Summary</div>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th style="text-align:left;">Branch</th>
+        <th>Semester</th>
+        <th>Total</th>
+        <th>Pass</th>
+        <th>Fail</th>
+        <th>Pass %</th>
+        <th>Avg SGPA</th>
+        <th>Remarks</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in branch_stats %}
+      <tr {% if b.pass_pct < 50 %}class="fail-row"{% elif b.pass_pct == 100 %}class="topper-row"{% endif %}>
+        <td>{{ forloop.counter }}</td>
+        <td class="tl" style="font-weight:600;">{{ b.student__branch }}</td>
+        <td>Sem {{ b.semester }}</td>
+        <td>{{ b.total }}</td>
+        <td class="pass-text">{{ b.passes }}</td>
+        <td class="{% if b.fail_pct > 0 %}fail-text{% endif %}">{{ b.fail_pct|floatformat:0 }}</td>
+        <td>
+          <strong class="{% if b.pass_pct >= 80 %}pass-text{% elif b.pass_pct < 50 %}fail-text{% endif %}">
+            {{ b.pass_pct }}%
+          </strong>
+        </td>
+        <td><strong>{{ b.avg_sgpa }}</strong></td>
+        <td>
+          <strong class="{% if b.pass_pct >= 80 %}pass-text{% elif b.pass_pct < 50 %}fail-text{% endif %}">
+            {% if b.pass_pct >= 80 %}Excellent{% elif b.pass_pct >= 60 %}Good{% elif b.pass_pct >= 40 %}Average{% else %}Needs Improvement{% endif %}
+          </strong>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" style="text-align:center; padding:14px; color:#888;">No data available. Upload results first.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if toppers %}
+  <div class="sec-heading">Branch Toppers — Highest CGPA</div>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>USN</th>
+        <th style="text-align:left;">Student Name</th>
+        <th>Branch</th>
+        <th>Batch</th>
+        <th>CGPA</th>
+        <th>Backlogs</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in toppers %}
+      <tr class="topper-row">
+        <td>
+          {% if forloop.counter == 1 %}<span class="gold-text">&#9733; 1st</span>
+          {% elif forloop.counter == 2 %}<span class="silver-text">&#9733; 2nd</span>
+          {% elif forloop.counter == 3 %}<span class="bronze-text">&#9733; 3rd</span>
+          {% else %}{{ forloop.counter }}th{% endif %}
+        </td>
+        <td>{{ t.usn }}</td>
+        <td class="tl" style="font-weight:500;">{{ t.name }}</td>
+        <td>{{ t.branch }}</td>
+        <td>{{ t.batch }}</td>
+        <td><strong class="pass-text">{{ t.cgpa }}</strong></td>
+        <td>
+          {% if t.backlogs == 0 %}
+            <span class="pass-text">None</span>
+          {% else %}
+            <span class="fail-text">{{ t.backlogs }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <p class="note-text">
+    * Pass % = (Pass / Total) &times; 100 &nbsp;|&nbsp;
+    * Avg SGPA from all uploaded semester records &nbsp;|&nbsp;
+    * Fail = Total &minus; Pass
+  </p>
+
+  <div class="signature-row">
+    <div class="sig-spacer"></div>
+    <div class="sig-right">
+      <div class="seal-box">
+        <div class="seal-inner">Office<br>Seal</div>
+      </div>
+      <div class="sig-line">Principal</div>
+      <div class="sig-sub">SJB Institute of Technology</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <div class="footer-left">Result Analytics — Academic Performance System &nbsp;|&nbsp; Confidential — For Internal Use Only</div>
+    <div class="footer-right">Generated: {% now "d M Y, h:i A" %}</div>
+  </div>
+
+</div>
+
+</body>
+</html>

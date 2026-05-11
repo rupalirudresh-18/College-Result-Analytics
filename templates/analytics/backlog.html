@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Backlog Tracker{% endblock %}
+{% block page_title %}Backlog Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1><span class="dot-accent"></span>Backlog Tracker</h1>
+    <p class="section-sub mb-0 mt-1">Student-wise failed subject tracking and trend analysis</p>
+  </div>
+</div>
+
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon icon-red"><i class="bi bi-exclamation-triangle-fill"></i></div>
+      <div class="stat-value">{{ total_backlog }}</div>
+      <div class="stat-label">Total Backlogs</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon icon-purple"><i class="bi bi-person-x-fill"></i></div>
+      <div class="stat-value">{{ total_backlog_students }}</div>
+      <div class="stat-label">Students with Backlogs</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">Branch</label>
+        <input type="text" name="branch" value="{{ filters.branch }}" class="form-control" placeholder="Branch">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Semester</label>
+        <select name="semester" class="form-select">
+          <option value="">All</option>
+          {% for i in "12345678" %}
+          <option value="{{ i }}" {% if filters.semester == i %}selected{% endif %}>Sem {{ i }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6 d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i>Filter</button>
+        <a href="{% url 'backlog_view' %}" class="btn btn-outline-secondary">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <!-- Backlog trend chart -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-graph-up-arrow me-2" style="color:var(--danger)"></i>Backlog Count by Semester</div>
+      <div class="card-body">
+        <canvas id="backlogTrendChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student-wise backlog top list -->
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-person-exclamation me-2" style="color:var(--danger)"></i>Students with Most Backlogs</div>
+      <div class="card-body p-0">
+        <div class="table-responsive" style="max-height:260px; overflow-y:auto;">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>USN</th><th>Name</th><th>Branch</th><th>Batch</th><th>Backlogs</th><th></th></tr></thead>
+            <tbody>
+              {% for sb in student_backlogs %}
+              <tr>
+                <td><code style="font-size:.76rem; color:var(--primary-dark);">{{ sb.student__usn }}</code></td>
+                <td style="font-size:.83rem; font-weight:500;">{{ sb.student__name }}</td>
+                <td><span class="badge-orange" style="font-size:.7rem;">{{ sb.student__branch }}</span></td>
+                <td style="font-size:.78rem; color:var(--text-muted);">{{ sb.student__batch }}</td>
+                <td><span class="badge-fail">{{ sb.count }}</span></td>
+                <td><a href="{% url 'student_profile' sb.student__usn %}" class="btn btn-sm btn-outline-primary py-0 px-2"><i class="bi bi-eye"></i></a></td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" class="text-center text-muted py-3" style="font-size:.84rem;">No backlog students 🎉</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Full backlog list -->
+<div class="card">
+  <div class="card-header"><i class="bi bi-list-ul me-2" style="color:var(--primary)"></i>All Active Backlogs</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr><th>USN</th><th>Student</th><th>Branch</th><th>Subject Code</th><th>Subject Name</th><th>Semester</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          {% for b in backlogs %}
+          <tr>
+            <td><code style="font-size:.78rem; color:var(--primary-dark);">{{ b.student.usn }}</code></td>
+            <td style="font-size:.83rem; font-weight:500;">
+              <a href="{% url 'student_profile' b.student.usn %}" style="color:var(--text-main); text-decoration:none;">{{ b.student.name }}</a>
+            </td>
+            <td><span class="badge-orange" style="font-size:.7rem;">{{ b.student.branch }}</span></td>
+            <td><code style="font-size:.76rem;">{{ b.subject.code }}</code></td>
+            <td style="font-size:.82rem;">{{ b.subject.name|truncatechars:40 }}</td>
+            <td>Sem {{ b.semester }}</td>
+            <td>
+              <span class="badge-{% if b.cleared %}pass{% else %}fail{% endif %}">
+                {% if b.cleared %}Cleared{% else %}Active{% endif %}
+              </span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted">
+              <i class="bi bi-patch-check fs-2 d-block mb-2 opacity-30" style="color:var(--success)"></i>
+              No active backlogs found! Great performance.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const backlogData = {{ sem_backlog_json|safe }};
+const GRID = 'rgba(234,216,204,0.6)';
+
+new Chart(document.getElementById('backlogTrendChart'), {
+  type: 'bar',
+  data: {
+    labels: backlogData.map(d => 'Sem ' + d.semester),
+    datasets: [{
+      label: 'Backlogs',
+      data: backlogData.map(d => d.count),
+      backgroundColor: '#C0392B',
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A' } },
+      x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A' } }
+    }
+  }
+});
+</script>
+{% endblock %}

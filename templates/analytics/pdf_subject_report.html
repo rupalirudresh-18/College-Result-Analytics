@@ -1,0 +1,280 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Subject Result Report — {{ subject.code }}</title>
+<style>
+  @page { size: A4; margin: 8mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Calibri', 'Arial', sans-serif; font-size: 9.5pt; color: #111; background: #fff; }
+
+  /* Decorative pink scalloped border like the grade card */
+  .page {
+    border: 3px double #e35d7b;
+    outline: 1px solid #e35d7b;
+    outline-offset: 4px;
+    padding: 10px 14px;
+    background: #fffafc;
+    min-height: 280mm;
+    position: relative;
+  }
+  .page::before {
+    content: "";
+    position: absolute; inset: 4px;
+    border: 2px dashed #f4a8bb;
+    pointer-events: none;
+  }
+  .inner { position: relative; padding: 8px 10px; }
+
+  /* Header */
+  .inst-header { width: 100%; display: table; margin-bottom: 6px; }
+  .logo-cell { display: table-cell; vertical-align: middle; width: 80px; }
+  .logo-cell img { width: 70px; height: 70px; }
+  .logo-placeholder {
+    width: 68px; height: 68px; border-radius: 50%;
+    border: 2px solid #b32a4d; color: #b32a4d; font-weight: bold; font-size: 8pt;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    line-height: 1.1;
+  }
+  .header-text-cell { display: table-cell; vertical-align: middle; text-align: center; padding: 0 10px; }
+  .knd { font-size: 11pt; font-weight: bold; color: #1a1a1a; margin-bottom: 2px; }
+  .inst-name { font-size: 17pt; font-weight: bold; color: #1f6fbf; letter-spacing: .3px; margin-bottom: 2px; }
+  .inst-addr { font-size: 8.5pt; color: #333; font-style: italic; }
+
+  /* Title strip */
+  .grade-card-title {
+    text-align: center; font-size: 13pt; font-weight: bold;
+    color: #111; padding: 4px 0; margin: 6px 0 4px;
+  }
+  .sub-title {
+    text-align: center; font-size: 11pt; font-weight: bold;
+    color: #222; margin-bottom: 10px;
+  }
+
+  /* Info block */
+  .info-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10pt; }
+  .info-table td { padding: 4px 8px; vertical-align: top; }
+  .info-table .lbl { width: 22%; font-weight: bold; color: #111; }
+  .info-table .sep { width: 2%; }
+  .info-table .val { width: 26%; }
+
+  /* Stats */
+  .stats-row { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  .stats-row td {
+    border: 1px solid #d9577a; text-align: center; padding: 6px 4px; width: 20%;
+    background: #fff;
+  }
+  .stats-row .sv { font-size: 14pt; font-weight: bold; color: #b32a4d; display: block; }
+  .stats-row .sl { font-size: 8pt; color: #555; text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; display: block; }
+  .stats-row td.green .sv { color: #2E8B57; }
+  .stats-row td.red .sv { color: #C0392B; }
+  .stats-row td.orange .sv { color: #E8701A; }
+
+  /* Results table */
+  table.marks { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 10px; }
+  table.marks th {
+    background: #fff; color: #111; border: 1px solid #d9577a;
+    padding: 6px 3px; text-align: center; font-size: 8.7pt; font-weight: bold;
+  }
+  table.marks th .sub { display:block; font-weight: normal; font-size: 8pt; color:#555; }
+  table.marks td { border: 1px solid #d9577a; padding: 5px 4px; text-align: center; }
+  table.marks tbody tr.fail-row td { background: #fff1f1; }
+  table.marks td.tl { text-align: left; }
+
+  .grade-O, .grade-Ap { color: #2E8B57; font-weight: bold; }
+  .grade-A  { color: #27AE60; font-weight: bold; }
+  .grade-Bp { color: #E8701A; font-weight: bold; }
+  .grade-F  { color: #C0392B; font-weight: bold; }
+
+  /* Summary footer (like Semester Credits Earned row) */
+  table.summary { width: 100%; border-collapse: collapse; margin: 10px 0 12px; font-size: 10pt; }
+  table.summary td { border: 1px solid #d9577a; padding: 6px 10px; }
+  table.summary .lbl { background: #fff; font-weight: bold; width: 28%; }
+  table.summary .val { width: 22%; text-align: center; font-weight: bold; color: #b32a4d; }
+
+  /* Scale */
+  .scale-title { font-size: 9pt; font-weight: bold; color: #7a1f37; margin: 4px 0; }
+  table.scale { width: 100%; border-collapse: collapse; font-size: 8.6pt; margin-bottom: 12px; }
+  table.scale th, table.scale td { border: 1px solid #d9577a; padding: 4px 2px; text-align: center; }
+  table.scale th { background: #fdecf1; color: #7a1f37; }
+
+  /* Signatures */
+  .sign-table { width: 100%; border-collapse: collapse; margin-top: 28px; }
+  .sign-table td { width: 25%; text-align: center; vertical-align: bottom; padding-top: 40px; font-size: 9pt; }
+  .sign-line { border-top: 1px solid #333; margin: 0 8px 3px; padding-top: 3px; font-weight: bold; }
+  .sig-sub { font-size: 8pt; color: #555; }
+
+  .footer {
+    margin-top: 14px; padding-top: 6px; border-top: 1px solid #d9577a;
+    display: table; width: 100%; font-size: 8.5pt; color: #666;
+  }
+  .footer .l { display: table-cell; text-align: left; }
+  .footer .r { display: table-cell; text-align: right; }
+
+  .print-note {
+    background: #FFF3CD; border: 1px solid #F5A264; border-radius: 4px;
+    padding: 8px 12px; margin-bottom: 10px; font-size: 9pt;
+  }
+  @media print { .print-note { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="print-note">
+  Tip: Use your browser's Print → Save as PDF (A4, default margins) for best results.
+</div>
+
+<div class="page">
+  <div class="inner">
+
+    {# ========== HEADER ========== #}
+    <div class="inst-header">
+      <div class="logo-cell">
+        {% if logo_url %}
+         <img src="{% static 'sjbit_logo.png' %}" alt="SJBIT Logo">
+        {% else %}
+          <div class="logo-placeholder">SJBIT<br>LOGO</div>
+        {% endif %}
+      </div>
+      <div class="header-text-cell">
+        <div class="knd">ಎಸ್ ಜೆ ಬಿ ತಾಂತ್ರಿಕ ಮಹಾವಿದ್ಯಾಲಯ, ಬೆಂಗಳೂರು – 560060</div>
+        <div class="inst-name">S J B Institute of Technology, Bengaluru - 560060</div>
+        <div class="inst-addr">(An Autonomous Institute under Visvesvaraya Technological University, Belagavi, Karnataka, India)</div>
+        <div class="grade-card-title">SUBJECT RESULT REPORT</div>
+        <div class="sub-title">Bachelor of Engineering — Subject-wise Result Analysis</div>
+      </div>
+      <div class="logo-cell"></div>
+    </div>
+
+    {# ========== SUBJECT INFO ========== #}
+    <table class="info-table">
+      <tr>
+        <td class="lbl">Subject Code</td><td class="sep">:</td><td class="val">{{ subject.code }}</td>
+        <td class="lbl">Credits</td><td class="sep">:</td><td class="val">{{ subject.credits|default:"—" }}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Subject Name</td><td class="sep">:</td><td class="val" colspan="4">{{ subject.name }}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Branch</td><td class="sep">:</td><td class="val">{{ subject.branch|default:"—" }}</td>
+        <td class="lbl">Semester</td><td class="sep">:</td><td class="val">{{ subject.semester|default:"—" }}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Report Date</td><td class="sep">:</td><td class="val">{% now "d M Y" %}</td>
+      </tr>
+    </table>
+
+    {# ========== STATS ========== #}
+    <table class="stats-row">
+      <tr>
+        <td><span class="sv">{{ total }}</span><span class="sl">Appeared</span></td>
+        <td class="green"><span class="sv">{{ passes }}</span><span class="sl">Pass</span></td>
+        <td class="red"><span class="sv">{{ fails }}</span><span class="sl">Fail</span></td>
+        <td class="orange"><span class="sv">{{ pass_pct }}%</span><span class="sl">Pass %</span></td>
+        <td><span class="sv">{{ avg_total }}</span><span class="sl">Avg Marks</span></td>
+      </tr>
+    </table>
+
+    {# ========== RESULTS TABLE ========== #}
+    <table class="marks">
+      <thead>
+        <tr>
+          <th style="width:5%">Sl.<br>No.</th>
+          <th style="width:13%">USN</th>
+          <th style="width:24%">Student Name</th>
+          <th style="width:10%">Branch</th>
+          <th style="width:9%">CIE</th>
+          <th style="width:9%">SEE</th>
+          <th style="width:9%">Total</th>
+          <th style="width:8%">Grade</th>
+          <th style="width:6%">GP</th>
+          <th style="width:7%">Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in results %}
+          <tr class="{% if r.get_pass_fail_display|lower == 'fail' %}fail-row{% endif %}">
+            <td>{{ forloop.counter }}</td>
+            <td>{{ r.student.usn }}</td>
+            <td class="tl">{{ r.student.name }}</td>
+            <td>{{ r.student.branch }}</td>
+            <td>{{ r.cie_marks|default:"—" }}</td>
+            <td>{{ r.see_marks|default:"—" }}</td>
+            <td><strong>{{ r.total_marks|default:"—" }}</strong></td>
+            <td class="grade-{{ r.grade|default:'-' }}">{{ r.grade|default:"—" }}</td>
+            <td>{{ r.grade_point|default:"—" }}</td>
+            <td>{{ r.get_pass_fail_display }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="10" style="padding:14px;">No records found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {# ========== SUMMARY (like Semester Credits row) ========== #}
+    <table class="summary">
+      <tr>
+        <td class="lbl">Total Students Appeared</td>
+        <td class="val">{{ total }}</td>
+        <td class="lbl">Average Marks</td>
+        <td class="val">{{ avg_total }}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Pass Percentage</td>
+        <td class="val">{{ pass_pct }}%</td>
+        <td class="lbl">Subject Credits</td>
+        <td class="val">{{ subject.credits|default:"—" }}</td>
+      </tr>
+    </table>
+
+    {# ========== GRADE SCALE ========== #}
+    <div class="scale-title">Grade Scale Reference (VTU)</div>
+    <table class="scale">
+      <tr>
+        <th>Marks</th>
+        <th>≥90</th><th>85</th><th>80</th><th>75</th><th>70</th><th>60</th><th>50</th><th>40</th><th>&lt;40</th>
+      </tr>
+      <tr>
+        <th>Grade</th>
+        <td>O</td><td>A+</td><td>A</td><td>B+</td><td>B</td><td>C</td><td>D</td><td>P</td><td>F</td>
+      </tr>
+      <tr>
+        <th>GP</th>
+        <td>10</td><td>9</td><td>8</td><td>7</td><td>6</td><td>5</td><td>4</td><td>4</td><td>0</td>
+      </tr>
+    </table>
+
+    {# ========== SIGNATURES ========== #}
+    <table class="sign-table">
+      <tr>
+        <td>
+          <div class="sign-line">Prepared By</div>
+          <div class="sig-sub">Result Analytics System</div>
+        </td>
+        <td>
+          <div class="sign-line">Class Teacher</div>
+          <div class="sig-sub">Coordinator</div>
+        </td>
+        <td>
+          <div class="sign-line">Head of Department</div>
+          <div class="sig-sub">HOD</div>
+        </td>
+        <td>
+          <div class="sign-line">Principal</div>
+          <div class="sig-sub">SJBIT</div>
+        </td>
+      </tr>
+    </table>
+
+    {# ========== FOOTER ========== #}
+    <div class="footer">
+      <div class="l">Confidential — For Internal Use Only</div>
+      <div class="r">Generated: {% now "d M Y, h:i A" %}</div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

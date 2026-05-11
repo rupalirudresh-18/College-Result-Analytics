@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1><span class="dot-accent"></span>Academic Dashboard</h1>
+    <p class="section-sub mb-0 mt-1">Bird's-eye view of student academic performance</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'upload_results' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-cloud-arrow-up me-1"></i>Upload Results
+    </a>
+    <a href="{% url 'export_summary' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-download me-1"></i>Export
+    </a>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-icon icon-orange"><i class="bi bi-people-fill"></i></div>
+      <div class="stat-value">{{ total_students }}</div>
+      <div class="stat-label">Total Students</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-icon icon-blue"><i class="bi bi-diagram-3-fill"></i></div>
+      <div class="stat-value">{{ total_branches }}</div>
+      <div class="stat-label">Branches</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-icon icon-green"><i class="bi bi-check-circle-fill"></i></div>
+      <div class="stat-value">{{ pass_count }}</div>
+      <div class="stat-label">Pass Students</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-icon icon-red"><i class="bi bi-x-circle-fill"></i></div>
+      <div class="stat-value">{{ fail_count }}</div>
+      <div class="stat-label">Fail Students</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-icon icon-purple"><i class="bi bi-exclamation-triangle-fill"></i></div>
+      <div class="stat-value">{{ backlog_students }}</div>
+      <div class="stat-label">Backlog Students</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="stat-card">
+      <div class="stat-icon icon-orange"><i class="bi bi-file-earmark-text-fill"></i></div>
+      <div class="stat-value">{{ total_results }}</div>
+      <div class="stat-label">Total Results</div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-pie-chart me-2" style="color:var(--primary)"></i>Pass / Fail Ratio</span>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <div style="max-width: 260px; width:100%;">
+          <canvas id="passfailChart" height="260"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-bar-chart me-2" style="color:var(--primary)"></i>Branch-wise Student Count
+      </div>
+      <div class="card-body">
+        <canvas id="branchChart" height="180"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SGPA Trend + Recent Uploads -->
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-graph-up me-2" style="color:var(--primary)"></i>Semester-wise Average SGPA
+      </div>
+      <div class="card-body">
+        <canvas id="sgpaChart" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-clock-history me-2" style="color:var(--primary)"></i>Recent Uploads
+      </div>
+      <div class="card-body p-0">
+        {% if recent_uploads %}
+          <ul class="list-group list-group-flush">
+            {% for log in recent_uploads %}
+            <li class="list-group-item px-3 py-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <div style="font-size:.83rem; font-weight:500; color:var(--text-main);">{{ log.filename|truncatechars:28 }}</div>
+                  <div style="font-size:.72rem; color:var(--text-muted);">{{ log.uploaded_at|date:"d M Y, h:i A" }}</div>
+                </div>
+                <span class="badge-{% if log.status == 'SUCCESS' %}pass{% elif log.status == 'PARTIAL' %}orange{% else %}fail{% endif %}">
+                  {{ log.status }}
+                </span>
+              </div>
+              <div style="font-size:.72rem; color:var(--text-muted); margin-top:2px;">
+                {{ log.saved_rows }} saved / {{ log.valid_rows }} valid / {{ log.total_rows }} total
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="text-center py-4 text-muted" style="font-size:.85rem;">
+            <i class="bi bi-inbox fs-3 d-block mb-2 opacity-40"></i>
+            No uploads yet.<br>
+            <a href="{% url 'upload_results' %}">Upload your first CSV →</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Links -->
+<div class="row g-3 mt-1">
+  <div class="col-12">
+    <div class="glass-card p-4">
+      <h6 class="fw-semibold mb-3" style="color:var(--text-muted); font-size:.78rem; letter-spacing:.08em; text-transform:uppercase;">Quick Actions</h6>
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'course_analysis' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-bar-chart-line me-1"></i>Course Analysis</a>
+        <a href="{% url 'category_analysis' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pie-chart me-1"></i>Category Analysis</a>
+        <a href="{% url 'backlog_view' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-exclamation-triangle me-1"></i>Backlog Report</a>
+        <a href="{% url 'nba_report' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-award me-1"></i>NBA Metrics</a>
+        <a href="{% url 'student_list' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-people me-1"></i>All Students</a>
+        <a href="{% url 'export_pdf' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-pdf me-1"></i>PDF Report</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const ORANGE  = '#E8701A';
+const ORANGE_L= 'rgba(232,112,26,0.13)';
+const GREEN   = '#2E8B57';
+const RED     = '#C0392B';
+const GRID    = 'rgba(234,216,204,0.6)';
+const SHADES  = ['#E8701A','#F5A264','#C45A10','#F7C59F','#A84010','#FDE3CC','#7A3008','#FFB380'];
+
+// ── Shared tooltip style ────────────────────────────────────────────────────
+const TT = {
+  enabled: true,
+  backgroundColor: 'rgba(26,20,16,0.92)',
+  titleColor: '#F5A264',
+  bodyColor: '#fff',
+  borderColor: 'rgba(232,112,26,0.45)',
+  borderWidth: 1,
+  padding: 12,
+  cornerRadius: 10,
+  displayColors: true,
+  boxPadding: 4,
+  titleFont: { size: 12, weight: '600' },
+  bodyFont: { size: 12 },
+};
+
+// ── Pass / Fail doughnut ───────────────────────────────────────────────────
+const pfData = {{ pass_fail_json|safe }};
+
+// Center text plugin for doughnut
+const centerTextPlugin = {
+  id: 'centerText',
+  afterDraw(chart) {
+    if (chart.config.options.centerText) {
+      const { ctx, chartArea: { width, height, left, top } } = chart;
+      const cx = left + width / 2;
+      const cy = top + height / 2;
+      const cfg = chart.config.options.centerText;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `bold ${cfg.valueFontSize || 22}px DM Sans, sans-serif`;
+      ctx.fillStyle = cfg.valueColor || '#2D1F14';
+      ctx.fillText(cfg.value, cx, cy - 10);
+      ctx.font = `${cfg.labelFontSize || 11}px DM Sans, sans-serif`;
+      ctx.fillStyle = cfg.labelColor || '#8B6E5A';
+      ctx.fillText(cfg.label, cx, cy + 12);
+      ctx.restore();
+    }
+  }
+};
+Chart.register(centerTextPlugin);
+
+new Chart(document.getElementById('passfailChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Pass', 'Fail'],
+    datasets: [{
+      data: [pfData.pass, pfData.fail],
+      backgroundColor: [GREEN, RED],
+      borderWidth: 0,
+      hoverOffset: 10,
+    }]
+  },
+  options: {
+    cutout: '68%',
+    interaction: { mode: 'nearest', intersect: true },
+    centerText: {
+      value: pfData.pass + '/' + (pfData.pass + pfData.fail),
+      label: 'Pass / Total',
+      valueFontSize: 20,
+      labelFontSize: 11,
+      valueColor: '#2E8B57',
+      labelColor: '#8B6E5A',
+    },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { font: { size: 12 }, padding: 16, usePointStyle: true, pointStyle: 'circle' }
+      },
+      tooltip: {
+        ...TT,
+        mode: 'nearest',
+        intersect: true,
+        callbacks: {
+          label: ctx => {
+            const total = pfData.pass + pfData.fail;
+            const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+            return `  ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+          }
+        }
+      }
+    }
+  }
+});
+
+// ── Branch bar chart ───────────────────────────────────────────────────────
+const branchData = {{ branch_data_json|safe }};
+new Chart(document.getElementById('branchChart'), {
+  type: 'bar',
+  data: {
+    labels: branchData.map(d => d.branch),
+    datasets: [{
+      label: 'Students',
+      data: branchData.map(d => d.count),
+      backgroundColor: SHADES,
+      borderRadius: 7,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        ...TT,
+        callbacks: {
+          title: items => items[0].label,
+          label: ctx => `  Total Students: ${ctx.parsed.y}`
+        }
+      }
+    },
+    scales: {
+      y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A' } },
+      x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A' } }
+    }
+  }
+});
+
+// ── SGPA trend line ────────────────────────────────────────────────────────
+const sgpaData = {{ sgpa_data_json|safe }};
+new Chart(document.getElementById('sgpaChart'), {
+  type: 'line',
+  data: {
+    labels: sgpaData.map(d => 'Semester ' + d.semester),
+    datasets: [{
+      label: 'Avg SGPA',
+      data: sgpaData.map(d => d.avg),
+      borderColor: ORANGE,
+      backgroundColor: ORANGE_L,
+      borderWidth: 2.5,
+      pointBackgroundColor: ORANGE,
+      pointHoverBackgroundColor: '#fff',
+      pointHoverBorderColor: ORANGE,
+      pointHoverBorderWidth: 2,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      fill: true,
+      tension: 0.35,
+    }]
+  },
+  options: {
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        ...TT,
+        callbacks: {
+          title: items => items[0].label,
+          label: ctx => `  Avg SGPA: ${ctx.parsed.y.toFixed(2)}`
+        }
+      }
+    },
+    scales: {
+      y: { min: 0, max: 10, grid: { color: GRID }, border: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A', stepSize: 2 } },
+      x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A' } }
+    }
+  }
+});
+</script>
+{% endblock %}

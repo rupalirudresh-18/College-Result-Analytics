@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}Category Analysis{% endblock %}
+{% block page_title %}Category Analysis{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><span class="dot-accent"></span>Category & Quota Analysis</h1>
+  <p class="section-sub mb-0 mt-1">Performance breakdown by admission quota, category, and gender</p>
+</div>
+
+<!-- Charts row -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-pie-chart me-2" style="color:var(--primary)"></i>Admission Quota — Avg SGPA</div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <div style="max-width:280px; width:100%;">
+          <canvas id="quotaChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-bar-chart me-2" style="color:var(--primary)"></i>Category — Pass % Comparison</div>
+      <div class="card-body">
+        <canvas id="categoryPassChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quota stats table -->
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-table me-2" style="color:var(--primary)"></i>Admission Quota-wise Summary</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr><th>Admission Quota</th><th>Students</th><th>Pass</th><th>Pass %</th><th>Avg SGPA</th><th>Pass Rate</th></tr>
+        </thead>
+        <tbody>
+          {% for q in quota_stats %}
+          <tr>
+            <td><span class="badge-orange">{{ q.label }}</span></td>
+            <td>{{ q.total }}</td>
+            <td style="color:var(--success); font-weight:500;">{{ q.passes }}</td>
+            <td>
+              <strong style="color:{% if q.pass_pct >= 80 %}var(--success){% elif q.pass_pct >= 60 %}var(--warning){% else %}var(--danger){% endif %}">
+                {{ q.pass_pct }}%
+              </strong>
+            </td>
+            <td><strong>{{ q.avg_sgpa }}</strong></td>
+            <td style="min-width:120px;">
+              <div class="progress"><div class="progress-bar bg-success" style="width:{{ q.pass_pct }}%"></div></div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center py-3 text-muted">No data available</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Category stats table -->
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-tags me-2" style="color:var(--primary)"></i>Category-wise Summary</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead>
+              <tr><th>Category</th><th>Students</th><th>Pass</th><th>Pass %</th><th>Avg SGPA</th></tr>
+            </thead>
+            <tbody>
+              {% for c in category_stats %}
+              <tr>
+                <td><span class="badge-orange">{{ c.label }}</span></td>
+                <td>{{ c.total }}</td>
+                <td style="color:var(--success); font-weight:500;">{{ c.passes }}</td>
+                <td>
+                  <span class="badge-{% if c.pass_pct >= 80 %}pass{% elif c.pass_pct >= 60 %}orange{% else %}fail{% endif %}">
+                    {{ c.pass_pct }}%
+                  </span>
+                </td>
+                <td><strong>{{ c.avg_sgpa }}</strong></td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center text-muted py-3">No data</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-gender-ambiguous me-2" style="color:var(--primary)"></i>Gender-wise Distribution</div>
+      <div class="card-body">
+        {% for g in gender_stats %}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span style="font-size:.87rem; font-weight:500;">
+            {% if g.student__gender == 'M' %}👨 Male
+            {% elif g.student__gender == 'F' %}👩 Female
+            {% else %}⚧ Other{% endif %}
+          </span>
+          <div class="text-end">
+            <span style="font-size:1.1rem; font-weight:700; color:var(--primary);">{{ g.total }}</span>
+            <span style="font-size:.75rem; color:var(--text-muted); margin-left:6px;">students</span>
+          </div>
+        </div>
+        <div class="progress mb-1" style="height:6px;">
+          {% with pct=g.avg_sgpa|floatformat:0 %}
+          <div class="progress-bar" style="width:{{ g.avg_sgpa|floatformat:0 }}0%"></div>
+          {% endwith %}
+        </div>
+        <div style="font-size:.75rem; color:var(--text-muted); margin-bottom:10px;">Avg SGPA: {{ g.avg_sgpa|floatformat:2 }}</div>
+        {% empty %}
+        <p class="text-muted text-center" style="font-size:.84rem;">No gender data</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const quotaData    = {{ quota_json|safe }};
+const categoryData = {{ category_json|safe }};
+const COLORS = ['#E8701A','#2E8B57','#2980B9','#8E44AD','#C0392B','#F39C12','#16A085'];
+const GRID   = 'rgba(234,216,204,0.6)';
+const TT = {
+  enabled: true,
+  backgroundColor: 'rgba(26,20,16,0.92)',
+  titleColor: '#F5A264',
+  bodyColor: '#fff',
+  borderColor: 'rgba(232,112,26,0.45)',
+  borderWidth: 1,
+  padding: 12,
+  cornerRadius: 10,
+  displayColors: true,
+  boxPadding: 4,
+  titleFont: { size: 12, weight: '600' },
+  bodyFont: { size: 12 },
+};
+
+// Register center text plugin (if not already registered from dashboard)
+if (!Chart.registry.plugins.get('centerText')) {
+  Chart.register({
+    id: 'centerText',
+    afterDraw(chart) {
+      if (chart.config.options.centerText) {
+        const { ctx, chartArea: { width, height, left, top } } = chart;
+        const cx = left + width / 2;
+        const cy = top + height / 2;
+        const cfg = chart.config.options.centerText;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = `bold ${cfg.valueFontSize || 22}px DM Sans, sans-serif`;
+        ctx.fillStyle = cfg.valueColor || '#2D1F14';
+        ctx.fillText(cfg.value, cx, cy - 10);
+        ctx.font = `${cfg.labelFontSize || 11}px DM Sans, sans-serif`;
+        ctx.fillStyle = cfg.labelColor || '#8B6E5A';
+        ctx.fillText(cfg.label, cx, cy + 12);
+        ctx.restore();
+      }
+    }
+  });
+}
+
+// Doughnut — Quota avg SGPA
+const totalQuotaStudents = quotaData.reduce((s, d) => s + d.total, 0);
+new Chart(document.getElementById('quotaChart'), {
+  type: 'doughnut',
+  data: {
+    labels: quotaData.map(d => d.label),
+    datasets: [{
+      data: quotaData.map(d => d.total),
+      backgroundColor: COLORS,
+      borderWidth: 0,
+      hoverOffset: 10,
+    }]
+  },
+  options: {
+    cutout: '62%',
+    interaction: { mode: 'nearest', intersect: true },
+    centerText: {
+      value: totalQuotaStudents,
+      label: 'Total Students',
+      valueFontSize: 22,
+      labelFontSize: 11,
+      valueColor: '#E8701A',
+      labelColor: '#8B6E5A',
+    },
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12, usePointStyle: true, pointStyle: 'circle' } },
+      tooltip: {
+        ...TT,
+        mode: 'nearest',
+        intersect: true,
+        callbacks: {
+          title: items => items[0].label,
+          label: ctx => {
+            const d = quotaData[ctx.dataIndex];
+            const pct = totalQuotaStudents ? ((d.total / totalQuotaStudents) * 100).toFixed(1) : 0;
+            return `  Students: ${d.total} (${pct}%)`;
+          },
+          afterLabel: ctx => {
+            const d = quotaData[ctx.dataIndex];
+            return [`  Pass %: ${d.pass_pct}%`, `  Avg SGPA: ${d.avg_sgpa}`];
+          }
+        }
+      }
+    }
+  }
+});
+
+// Bar — Category Pass % vs Avg SGPA×10
+new Chart(document.getElementById('categoryPassChart'), {
+  type: 'bar',
+  data: {
+    labels: categoryData.map(d => d.label),
+    datasets: [
+      { label: 'Pass %',        data: categoryData.map(d => d.pass_pct),      backgroundColor: '#E8701A', borderRadius: 6 },
+      { label: 'Avg SGPA × 10', data: categoryData.map(d => d.avg_sgpa * 10), backgroundColor: 'rgba(41,128,185,0.75)', borderRadius: 6 }
+    ]
+  },
+  options: {
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16 } },
+      tooltip: {
+        ...TT,
+        callbacks: {
+          title: items => items[0].label,
+          label: ctx => {
+            if (ctx.datasetIndex === 0) return `  Pass %: ${ctx.parsed.y}%`;
+            return `  Avg SGPA: ${(ctx.parsed.y / 10).toFixed(2)}`;
+          },
+          afterBody: items => {
+            const idx = items[0].dataIndex;
+            const d = categoryData[idx];
+            return [`  Total Students: ${d.total}`];
+          }
+        }
+      }
+    },
+    scales: {
+      y: { min: 0, max: 100, grid: { color: GRID }, border: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A', callback: v => v + '%' } },
+      x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A' } }
+    }
+  }
+});
+</script>
+{% endblock %}

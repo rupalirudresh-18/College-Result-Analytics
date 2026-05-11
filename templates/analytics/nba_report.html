@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}NBA Metrics{% endblock %}
+{% block page_title %}NBA Metrics{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1><span class="dot-accent"></span>NBA Metrics</h1>
+    <p class="section-sub mb-0 mt-1">Success Index (SI) and Academic Performance Index (API) for NBA accreditation</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'export_nba' %}{% if filters.branch %}?branch={{ filters.branch }}{% endif %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-download me-1"></i>Export CSV
+    </a>
+    <a href="{% url 'export_pdf' %}?type=nba" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-file-pdf me-1"></i>PDF Report
+    </a>
+  </div>
+</div>
+
+<!-- Explanation cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="glass-card p-4">
+      <div class="d-flex align-items-start gap-3">
+        <div class="stat-icon icon-orange" style="flex-shrink:0;"><i class="bi bi-graph-up-arrow"></i></div>
+        <div>
+          <h6 style="font-family:'Playfair Display',serif; font-weight:700; margin-bottom:4px;">Success Index (SI)</h6>
+          <p style="font-size:.83rem; color:var(--text-muted); margin:0;">
+            SI = (Students Passed / Total Students) × 100<br>
+            Measures the overall pass rate in a course or semester.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="glass-card p-4">
+      <div class="d-flex align-items-start gap-3">
+        <div class="stat-icon icon-blue" style="flex-shrink:0;"><i class="bi bi-award"></i></div>
+        <div>
+          <h6 style="font-family:'Playfair Display',serif; font-weight:700; margin-bottom:4px;">Academic Performance Index (API)</h6>
+          <p style="font-size:.83rem; color:var(--text-muted); margin:0;">
+            API = (SI × Avg SGPA) / 10<br>
+            Combines pass rate with academic quality for NBA reporting.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">Filter by Branch</label>
+        <input type="text" name="branch" value="{{ filters.branch }}" class="form-control" placeholder="Branch name">
+      </div>
+      <div class="col-md-8 d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i>Filter</button>
+        <a href="{% url 'nba_report' %}" class="btn btn-outline-secondary">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-bar-chart-line me-2" style="color:var(--primary)"></i>Success Index by Branch & Semester</div>
+      <div class="card-body">
+        <canvas id="siChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-activity me-2" style="color:var(--primary)"></i>API by Branch & Semester</div>
+      <div class="card-body">
+        <canvas id="apiChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NBA Metrics Table -->
+<div class="card">
+  <div class="card-header"><i class="bi bi-table me-2" style="color:var(--primary)"></i>NBA Metrics Summary</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th>Branch</th>
+            <th>Semester</th>
+            <th>Academic Year</th>
+            <th>Total</th>
+            <th>Pass</th>
+            <th>Avg SGPA</th>
+            <th>Success Index</th>
+            <th>API</th>
+            <th>Grade</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in metrics %}
+          <tr>
+            <td><span class="badge-orange">{{ m.branch }}</span></td>
+            <td>Sem {{ m.semester }}</td>
+            <td style="font-size:.82rem; color:var(--text-muted);">{{ m.academic_year|default:"-" }}</td>
+            <td>{{ m.total_students }}</td>
+            <td style="color:var(--success); font-weight:500;">{{ m.pass_count }}</td>
+            <td><strong>{{ m.avg_sgpa }}</strong></td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <strong style="color:{% if m.success_index >= 80 %}var(--success){% elif m.success_index >= 60 %}var(--warning){% else %}var(--danger){% endif %}">
+                  {{ m.success_index }}%
+                </strong>
+              </div>
+            </td>
+            <td>
+              <strong style="color:{% if m.academic_performance_index >= 7 %}var(--success){% elif m.academic_performance_index >= 5 %}var(--warning){% else %}var(--danger){% endif %}">
+                {{ m.academic_performance_index }}
+              </strong>
+            </td>
+            <td>
+              {% if m.success_index >= 80 %}
+                <span class="badge-pass">Excellent</span>
+              {% elif m.success_index >= 60 %}
+                <span class="badge-orange">Good</span>
+              {% else %}
+                <span class="badge-fail">Needs Improvement</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center py-5 text-muted">
+              <i class="bi bi-award fs-2 d-block mb-2 opacity-30"></i>
+              No NBA metrics available yet. Upload result data first.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const chartData = {{ chart_data_json|safe }};
+const branches  = [...new Set(chartData.map(d => d.branch))];
+const semesters = [...new Set(chartData.map(d => d.semester))].sort((a,b) => a - b);
+const COLORS    = ['#E8701A','#2E8B57','#2980B9','#8E44AD','#C0392B','#F39C12'];
+const GRID      = 'rgba(234,216,204,0.6)';
+const labels    = semesters.map(s => 'Sem ' + s);
+
+function mkDataset(field, branch, i) {
+  return {
+    label: branch,
+    data: semesters.map(s => {
+      const row = chartData.find(d => d.branch === branch && d.semester === s);
+      return row ? parseFloat(row[field]) : null;
+    }),
+    backgroundColor: COLORS[i % COLORS.length],
+    borderRadius: 5,
+  };
+}
+
+const axisOpts = {
+  y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A' } },
+  x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A' } }
+};
+
+new Chart(document.getElementById('siChart'), {
+  type: 'bar',
+  data: { labels, datasets: branches.map((b, i) => mkDataset('success_index', b, i)) },
+  options: {
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+    scales: { ...axisOpts, y: { ...axisOpts.y, max: 100 } }
+  }
+});
+
+new Chart(document.getElementById('apiChart'), {
+  type: 'bar',
+  data: { labels, datasets: branches.map((b, i) => mkDataset('academic_performance_index', b, i)) },
+  options: {
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+    scales: axisOpts
+  }
+});
+</script>
+{% endblock %}

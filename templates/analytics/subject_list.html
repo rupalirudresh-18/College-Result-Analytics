@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Subjects{% endblock %}
+{% block page_title %}Subject Records{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1><span class="dot-accent"></span>Subject-wise Analysis</h1>
+    <p class="section-sub mb-0 mt-1">View pass/fail, grade distribution and student performance per subject</p>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">Branch</label>
+        <input type="text" name="branch" value="{{ filters.branch }}" class="form-control" placeholder="e.g. Computer Science">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Semester</label>
+        <select name="semester" class="form-select">
+          <option value="">All</option>
+          {% for i in "12345678" %}
+          <option value="{{ i }}" {% if filters.semester == i %}selected{% endif %}>Sem {{ i }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6 d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i>Filter</button>
+        <a href="{% url 'subject_list' %}" class="btn btn-outline-secondary">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if subject_stats %}
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th>Subject Code</th>
+            <th>Subject Name</th>
+            <th>Branch</th>
+            <th>Sem</th>
+            <th>Credits</th>
+            <th>Total</th>
+            <th>Pass</th>
+            <th>Fail</th>
+            <th>Pass %</th>
+            <th>Avg Marks</th>
+            <th>Avg GP</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in subject_stats %}
+          <tr>
+            <td><code style="color:var(--primary-dark); font-size:.8rem;">{{ s.subject.code }}</code></td>
+            <td style="font-weight:500; font-size:.85rem;">{{ s.subject.name }}</td>
+            <td><span class="badge-orange" style="font-size:.7rem;">{{ s.subject.branch|default:"-" }}</span></td>
+            <td style="font-size:.83rem;">{{ s.subject.semester|default:"-" }}</td>
+            <td style="font-size:.83rem;">{{ s.subject.credits }}</td>
+            <td style="font-size:.83rem;">{{ s.total }}</td>
+            <td style="color:var(--success); font-weight:600;">{{ s.passes }}</td>
+            <td style="color:var(--danger); font-weight:600;">{{ s.fails }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge-{% if s.pass_pct >= 80 %}pass{% elif s.pass_pct >= 60 %}orange{% else %}fail{% endif %}">
+                  {{ s.pass_pct }}%
+                </span>
+                <div class="progress flex-fill" style="min-width:60px;">
+                  <div class="progress-bar {% if s.pass_pct >= 80 %}bg-success{% elif s.pass_pct >= 60 %}{% else %}bg-danger{% endif %}"
+                       style="width:{{ s.pass_pct }}%; background:{% if s.pass_pct >= 80 %}var(--success){% elif s.pass_pct >= 60 %}var(--warning){% else %}var(--danger){% endif %}">
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td style="font-size:.83rem;"><strong>{{ s.avg_marks }}</strong></td>
+            <td style="font-size:.83rem;"><strong>{{ s.avg_gp }}</strong></td>
+            <td>
+              <a href="{% url 'subject_detail' s.subject.code %}" class="btn btn-sm btn-primary py-0 px-2">
+                <i class="bi bi-eye me-1"></i>View
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-book fs-1 d-block mb-3 opacity-30"></i>
+      <p>No subjects found. <a href="{% url 'upload_results' %}">Upload results first →</a></p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

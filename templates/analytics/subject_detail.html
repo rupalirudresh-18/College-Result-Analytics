@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% block title %}{{ subject.code }} — {{ subject.name }}{% endblock %}
+{% block page_title %}Subject Detail{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'subject_list' %}" style="color:var(--primary);">Subjects</a></li>
+    <li class="breadcrumb-item active">{{ subject.code }}</li>
+  </ol>
+</nav>
+
+<!-- Subject Header -->
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+  <div>
+    <h1><span class="dot-accent"></span>{{ subject.name }}</h1>
+    <div class="d-flex flex-wrap gap-2 mt-2">
+      <span class="badge-orange"><i class="bi bi-code-square me-1"></i>{{ subject.code }}</span>
+      <span class="badge-orange"><i class="bi bi-diagram-3 me-1"></i>{{ subject.branch|default:"All Branches" }}</span>
+      <span class="badge-orange"><i class="bi bi-calendar3 me-1"></i>Semester {{ subject.semester|default:"-" }}</span>
+      <span class="badge-orange"><i class="bi bi-star me-1"></i>{{ subject.credits }} Credits</span>
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'export_subject_csv' subject.code %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export CSV
+    </a>
+    <a href="{% url 'export_subject_pdf' subject.code %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF
+    </a>
+  </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-icon icon-orange"><i class="bi bi-people-fill"></i></div>
+      <div class="stat-value">{{ stats.total }}</div>
+      <div class="stat-label">Total Students</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-icon icon-green"><i class="bi bi-check-circle-fill"></i></div>
+      <div class="stat-value" style="color:var(--success);">{{ stats.passes }}</div>
+      <div class="stat-label">Pass</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-icon icon-red"><i class="bi bi-x-circle-fill"></i></div>
+      <div class="stat-value" style="color:var(--danger);">{{ stats.fails }}</div>
+      <div class="stat-label">Fail</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-icon icon-blue"><i class="bi bi-percent"></i></div>
+      <div class="stat-value" style="color:{% if stats.pass_pct >= 80 %}var(--success){% elif stats.pass_pct >= 60 %}var(--warning){% else %}var(--danger){% endif %};">
+        {{ stats.pass_pct }}
+      </div>
+      <div class="stat-label">Pass %</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-icon icon-orange"><i class="bi bi-bar-chart-fill"></i></div>
+      <div class="stat-value">{{ stats.avg_total }}</div>
+      <div class="stat-label">Avg Total</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-icon icon-purple"><i class="bi bi-award-fill"></i></div>
+      <div class="stat-value">{{ stats.avg_gp }}</div>
+      <div class="stat-label">Avg Grade Pt</div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts + Grade Scale -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-bar-chart me-2" style="color:var(--primary)"></i>Grade Distribution</div>
+      <div class="card-body">
+        <canvas id="gradeChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-pie-chart me-2" style="color:var(--primary)"></i>Pass / Fail Split</div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <div style="max-width:220px; width:100%;">
+          <canvas id="pfChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-info-circle me-2" style="color:var(--primary)"></i>Grade Scale</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" style="font-size:.8rem;">
+          <thead><tr><th class="ps-3">Marks</th><th>Grade</th><th>GP</th></tr></thead>
+          <tbody>
+            <tr><td class="ps-3">≥ 90</td><td><span class="badge-pass">O</span></td><td>10</td></tr>
+            <tr><td class="ps-3">≥ 85</td><td><span class="badge-pass">A+</span></td><td>9</td></tr>
+            <tr><td class="ps-3">≥ 80</td><td><span class="badge-pass">A</span></td><td>8</td></tr>
+            <tr><td class="ps-3">≥ 75</td><td><span class="badge-orange">B+</span></td><td>7</td></tr>
+            <tr><td class="ps-3">≥ 70</td><td><span class="badge-orange">B</span></td><td>6</td></tr>
+            <tr><td class="ps-3">≥ 60</td><td><span class="badge-orange">C</span></td><td>5</td></tr>
+            <tr><td class="ps-3">≥ 50</td><td><span class="badge-orange">D</span></td><td>4</td></tr>
+            <tr><td class="ps-3">≥ 40</td><td><span class="badge-orange">P</span></td><td>4</td></tr>
+            <tr><td class="ps-3">< 40</td><td><span class="badge-fail">F</span></td><td>0</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Average Marks Bar -->
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <div class="row g-3 text-center">
+      <div class="col-md-4">
+        <div style="font-size:.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em;">Avg CIE Marks</div>
+        <div style="font-size:1.6rem; font-weight:700; color:var(--primary); font-family:'Playfair Display',serif;">{{ stats.avg_cie }}</div>
+        <div class="progress mt-1"><div class="progress-bar" style="width:{{ stats.avg_cie }}%; background:var(--primary);"></div></div>
+        <div style="font-size:.7rem; color:var(--text-muted);">out of 50</div>
+      </div>
+      <div class="col-md-4">
+        <div style="font-size:.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em;">Avg SEE Marks</div>
+        <div style="font-size:1.6rem; font-weight:700; color:var(--info); font-family:'Playfair Display',serif;">{{ stats.avg_see }}</div>
+        <div class="progress mt-1"><div class="progress-bar" style="width:{{ stats.avg_see }}%; background:var(--info);"></div></div>
+        <div style="font-size:.7rem; color:var(--text-muted);">out of 100</div>
+      </div>
+      <div class="col-md-4">
+        <div style="font-size:.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em;">Avg Total Marks</div>
+        <div style="font-size:1.6rem; font-weight:700; color:var(--success); font-family:'Playfair Display',serif;">{{ stats.avg_total }}</div>
+        <div class="progress mt-1"><div class="progress-bar bg-success" style="width:{{ stats.avg_total|floatformat:0 }}%; background:var(--success)!important;"></div></div>
+        <div style="font-size:.7rem; color:var(--text-muted);">out of 100</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Student Results Table -->
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span><i class="bi bi-table me-2" style="color:var(--primary)"></i>Student-wise Results</span>
+    <span style="font-size:.8rem; color:var(--text-muted);">{{ stats.total }} students</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>USN</th>
+            <th>Student Name</th>
+            <th>Branch</th>
+            <th>CIE</th>
+            <th>SEE</th>
+            <th>Total</th>
+            <th>Grade</th>
+            <th>Grade Point</th>
+            <th>Result</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in results %}
+          <tr>
+            <td style="color:var(--text-muted); font-size:.78rem;">{{ forloop.counter }}</td>
+            <td><code style="font-size:.78rem; color:var(--primary-dark);">{{ r.student.usn }}</code></td>
+            <td style="font-weight:500; font-size:.85rem;">{{ r.student.name }}</td>
+            <td><span class="badge-orange" style="font-size:.7rem;">{{ r.student.branch }}</span></td>
+            <td style="font-size:.83rem;">{{ r.cie_marks|default:"-" }}</td>
+            <td style="font-size:.83rem;">{{ r.see_marks|default:"-" }}</td>
+            <td>
+              <strong style="font-size:.9rem; color:{% if r.total_marks >= 80 %}var(--success){% elif r.total_marks >= 60 %}var(--warning){% else %}var(--danger){% endif %}">
+                {{ r.total_marks|default:"-" }}
+              </strong>
+            </td>
+            <td>
+              {% with g=r.grade %}
+              <span style="
+                display:inline-block; padding:3px 10px; border-radius:20px; font-size:.76rem; font-weight:700;
+                background:{% if g == 'O' or g == 'A+' or g == 'A' %}rgba(46,139,87,.12){% elif g == 'F' %}rgba(192,57,43,.12){% else %}rgba(232,112,26,.12){% endif %};
+                color:{% if g == 'O' or g == 'A+' or g == 'A' %}var(--success){% elif g == 'F' %}var(--danger){% else %}var(--primary){% endif %};">
+                {{ g|default:"-" }}
+              </span>
+              {% endwith %}
+            </td>
+            <td style="font-size:.83rem; font-weight:600;">{{ r.grade_point|default:"-" }}</td>
+            <td>
+              <span class="badge-{% if r.pass_fail == 'P' %}pass{% elif r.pass_fail == 'F' %}fail{% else %}orange{% endif %}">
+                {{ r.get_pass_fail_display }}
+              </span>
+            </td>
+            <td>
+              <a href="{% url 'student_profile' r.student.usn %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="View Student Profile">
+                <i class="bi bi-person"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="11" class="text-center py-4 text-muted">No results found for this subject.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const gradeData = {{ grade_dist_json|safe }};
+const GRID = 'rgba(234,216,204,0.6)';
+const GRADE_COLORS = {
+  'O': '#2E8B57', 'A+': '#27AE60', 'A': '#52BE80',
+  'B+': '#E8701A', 'B': '#F5A264', 'C': '#F39C12',
+  'D': '#E67E22', 'P': '#D4AC0D', 'F': '#C0392B'
+};
+
+const TT = {
+  enabled: true,
+  backgroundColor: 'rgba(26,20,16,0.92)',
+  titleColor: '#F5A264', bodyColor: '#fff',
+  borderColor: 'rgba(232,112,26,0.45)', borderWidth: 1,
+  padding: 12, cornerRadius: 10, displayColors: true, boxPadding: 4,
+  titleFont: { size: 12, weight: '600' }, bodyFont: { size: 12 },
+};
+
+// Grade distribution bar
+new Chart(document.getElementById('gradeChart'), {
+  type: 'bar',
+  data: {
+    labels: gradeData.map(d => d.grade),
+    datasets: [{
+      label: 'Students',
+      data: gradeData.map(d => d.count),
+      backgroundColor: gradeData.map(d => GRADE_COLORS[d.grade] || '#E8701A'),
+      borderRadius: 7,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: { ...TT, callbacks: {
+        title: items => 'Grade ' + items[0].label,
+        label: ctx => `  Students: ${ctx.parsed.y}`,
+      }}
+    },
+    scales: {
+      y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A', stepSize: 1 } },
+      x: { grid: { display: false }, ticks: { font: { size: 12 }, color: '#8B6E5A', font: { weight: '600' } } }
+    }
+  }
+});
+
+// Pass/Fail doughnut
+if (!Chart.registry.plugins.get('centerText')) {
+  Chart.register({
+    id: 'centerText',
+    afterDraw(chart) {
+      if (chart.config.options.centerText) {
+        const { ctx, chartArea: { width, height, left, top } } = chart;
+        const cx = left + width / 2;
+        const cy = top + height / 2;
+        const cfg = chart.config.options.centerText;
+        ctx.save();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = `bold ${cfg.valueFontSize||22}px DM Sans,sans-serif`;
+        ctx.fillStyle = cfg.valueColor || '#2D1F14';
+        ctx.fillText(cfg.value, cx, cy - 10);
+        ctx.font = `${cfg.labelFontSize||11}px DM Sans,sans-serif`;
+        ctx.fillStyle = cfg.labelColor || '#8B6E5A';
+        ctx.fillText(cfg.label, cx, cy + 12);
+        ctx.restore();
+      }
+    }
+  });
+}
+
+const passCount = {{ stats.passes }};
+const failCount = {{ stats.fails }};
+const totalCount = passCount + failCount;
+new Chart(document.getElementById('pfChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Pass', 'Fail'],
+    datasets: [{
+      data: [passCount, failCount],
+      backgroundColor: ['#2E8B57', '#C0392B'],
+      borderWidth: 0, hoverOffset: 10,
+    }]
+  },
+  options: {
+    cutout: '65%',
+    interaction: { mode: 'nearest', intersect: true },
+    centerText: {
+      value: passCount + '/' + totalCount,
+      label: 'Pass / Total',
+      valueFontSize: 18,
+      labelFontSize: 10,
+      valueColor: '#2E8B57',
+      labelColor: '#8B6E5A',
+    },
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 16, usePointStyle: true, pointStyle: 'circle' } },
+      tooltip: { ...TT, mode: 'nearest', intersect: true, callbacks: {
+        label: ctx => {
+          const pct = totalCount ? ((ctx.parsed / totalCount) * 100).toFixed(1) : 0;
+          return `  ${ctx.label}: ${ctx.parsed} students (${pct}%)`;
+        }
+      }}
+    }
+  }
+});
+</script>
+{% endblock %}

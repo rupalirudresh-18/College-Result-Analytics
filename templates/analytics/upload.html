@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% load analytics_tags %}
+{% block title %}Upload Results{% endblock %}
+{% block page_title %}Upload Results{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><span class="dot-accent"></span>Upload Result Data</h1>
+  <p class="section-sub mb-0 mt-1">Upload student result data via CSV with automatic validation</p>
+</div>
+
+<div class="row g-4">
+  <!-- Upload Form -->
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-cloud-arrow-up me-2" style="color:var(--primary)"></i>CSV Upload</div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+          {% csrf_token %}
+          <div class="upload-zone mb-4" id="dropZone">
+            <i class="bi bi-file-earmark-spreadsheet" style="font-size:2.5rem; color:var(--primary-light); display:block; margin-bottom:12px;"></i>
+            <div style="font-weight:600; color:var(--text-main); margin-bottom:6px;">Drop your CSV file here</div>
+            <div style="font-size:.82rem; color:var(--text-muted); margin-bottom:16px;">or click below to browse</div>
+            {{ form.csv_file }}
+          </div>
+
+          <div class="form-check mb-3 ps-0 d-flex align-items-center gap-2">
+            {{ form.confirm_save }}
+            <label class="form-check-label" for="{{ form.confirm_save.id_for_label }}" style="font-size:.87rem;">
+              Save valid records to database after validation
+            </label>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-upload me-1"></i>Validate & Preview
+            </button>
+            <a href="{% url 'download_sample' %}" class="btn btn-outline-primary">
+              <i class="bi bi-download me-1"></i>Download Sample CSV
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Preview Results -->
+    {% if preview %}
+    <div class="card mt-4">
+      <div class="card-header">
+        <i class="bi bi-table me-2" style="color:var(--primary)"></i>Validation Preview
+      </div>
+      <div class="card-body pb-2">
+        <div class="row g-3 mb-4">
+          <div class="col-4">
+            <div class="text-center p-3 rounded-3" style="background:#FDF8F4; border:1px solid var(--border);">
+              <div style="font-size:1.8rem; font-weight:700; font-family:'Playfair Display',serif;">{{ preview.total }}</div>
+              <div style="font-size:.75rem; color:var(--text-muted); font-weight:500;">Total Rows</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="text-center p-3 rounded-3" style="background:rgba(46,139,87,.06); border:1px solid rgba(46,139,87,.2);">
+              <div style="font-size:1.8rem; font-weight:700; font-family:'Playfair Display',serif; color:#2E8B57;">{{ preview.valid|length }}</div>
+              <div style="font-size:.75rem; color:#2E8B57; font-weight:500;">Valid Rows</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="text-center p-3 rounded-3" style="background:rgba(192,57,43,.06); border:1px solid rgba(192,57,43,.2);">
+              <div style="font-size:1.8rem; font-weight:700; font-family:'Playfair Display',serif; color:#C0392B;">{{ preview.invalid|length }}</div>
+              <div style="font-size:.75rem; color:#C0392B; font-weight:500;">Invalid Rows</div>
+            </div>
+          </div>
+        </div>
+
+        {% if preview.invalid %}
+        <h6 class="fw-semibold mb-2" style="font-size:.84rem; color:var(--danger);">
+          <i class="bi bi-exclamation-circle me-1"></i>Row-wise Errors
+        </h6>
+        <div style="max-height:260px; overflow-y:auto;" class="mb-3">
+          <table class="table table-sm table-bordered mb-0">
+            <thead>
+              <tr><th style="width:70px;">Row</th><th>USN</th><th>Subject</th><th>Errors</th></tr>
+            </thead>
+            <tbody>
+              {% for err in preview.invalid %}
+              <tr>
+                <td><span class="badge bg-danger">{{ err.row }}</span></td>
+                <td style="font-size:.78rem;">{{ err.usn|default:"-" }}</td>
+                <td style="font-size:.78rem;">{{ err.subject|default:"-" }}</td>
+                <td>
+                  {% for e in err.errors %}
+                  <span class="badge-fail me-1 mb-1 d-inline-block">{{ e }}</span>
+                  {% endfor %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+
+        {% if preview.valid %}
+        <div class="alert alert-success">
+          <i class="bi bi-check-circle me-1"></i>
+          <strong>{{ preview.valid|length }} valid rows</strong> ready to save.
+          {% if not preview.invalid %}All rows are valid!{% endif %}
+          Check the <em>"Save valid records"</em> checkbox and submit again to save.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Sidebar: format guide + history -->
+  <div class="col-lg-5">
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-info-circle me-2" style="color:var(--primary)"></i>CSV Format Guide</div>
+      <div class="card-body p-0">
+        <div style="padding: 14px 18px;">
+          <p style="font-size:.83rem; color:var(--text-muted); margin-bottom:8px;"><strong>Required columns</strong> (must be present):</p>
+          <div class="d-flex flex-wrap gap-1 mb-3">
+            {% for col in "USN,Name,Branch,Semester,Batch,Subject_Code,Subject_Name,Credits,CIE,SEE,Total"|split:"," %}
+            <span class="badge-orange">{{ col }}</span>
+            {% endfor %}
+          </div>
+
+          <div style="background:rgba(46,139,87,.08); border:1px solid rgba(46,139,87,.2); border-radius:8px; padding:10px 12px; margin-bottom:12px;">
+            <div style="font-size:.8rem; font-weight:600; color:var(--success); margin-bottom:4px;">
+              <i class="bi bi-magic me-1"></i>Auto-Calculated (no need to include):
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+              {% for col in "Grade,Grade_Point,Pass_Fail,SGPA,CGPA"|split:"," %}
+              <span style="background:rgba(46,139,87,.12); color:var(--success); padding:2px 8px; border-radius:10px; font-size:.72rem; font-weight:600;">{{ col }}</span>
+              {% endfor %}
+            </div>
+            <div style="font-size:.75rem; color:var(--text-muted); margin-top:6px;">
+              Grade &amp; Grade Point → calculated from Total marks (VTU scheme)<br>
+              Pass/Fail → Total ≥ 40 AND SEE ≥ 35<br>
+              SGPA/CGPA → calculated automatically after upload
+            </div>
+          </div>
+
+          <p style="font-size:.83rem; color:var(--text-muted); margin-bottom:6px;"><strong>Optional columns</strong>:</p>
+          <div class="d-flex flex-wrap gap-1 mb-3">
+            {% for col in "Section,Gender,Admission_Quota,Admission_Type,Actual_Category,Seat_Category_Claimed,Seat_Category_Alloted,Domicile_State,Domicile_Place,CET_Rank,Achievements,Academic_Year"|split:"," %}
+            <span style="background:#F0E6DE; color:var(--text-muted); padding:2px 8px; border-radius:10px; font-size:.72rem;">{{ col }}</span>
+            {% endfor %}
+          </div>
+
+          <div style="background:#FDF0E6; border-radius:8px; padding:10px 12px; font-size:.79rem; color:var(--text-muted);">
+            <strong style="color:var(--primary);">Grade Scale (VTU):</strong><br>
+            ≥90 → O (10) &nbsp;|&nbsp; ≥85 → A+ (9) &nbsp;|&nbsp; ≥80 → A (8) &nbsp;|&nbsp; ≥75 → B+ (7)<br>
+            ≥70 → B (6) &nbsp;|&nbsp; ≥60 → C (5) &nbsp;|&nbsp; ≥50 → D (4) &nbsp;|&nbsp; ≥40 → P (4) &nbsp;|&nbsp; &lt;40 → F (0)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload History -->
+    <div class="card">
+      <div class="card-header"><i class="bi bi-clock-history me-2" style="color:var(--primary)"></i>Upload History</div>
+      <div class="card-body p-0">
+        {% if upload_logs %}
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>File</th><th>Date</th><th>Saved</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for log in upload_logs %}
+              <tr>
+                <td style="font-size:.78rem; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ log.filename }}</td>
+                <td style="font-size:.75rem; color:var(--text-muted);">{{ log.uploaded_at|date:"d M" }}</td>
+                <td style="font-size:.78rem;">{{ log.saved_rows }}/{{ log.total_rows }}</td>
+                <td>
+                  <span class="badge-{% if log.status == 'SUCCESS' %}pass{% elif log.status == 'PARTIAL' %}orange{% else %}fail{% endif %}">
+                    {{ log.status }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4" style="font-size:.84rem; color:var(--text-muted);">
+          <i class="bi bi-inbox d-block fs-3 mb-2 opacity-40"></i>No uploads yet
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Toppers{% endblock %}
+{% block page_title %}Toppers{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1><span class="dot-accent"></span>Toppers Identification</h1>
+    <p class="section-sub mb-0 mt-1">{{ total_ranked }} students ranked by CGPA across all branches</p>
+  </div>
+  <a href="{% url 'export_pdf' %}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF Report
+  </a>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Branch</label>
+        <input type="text" name="branch" value="{{ filters.branch }}" class="form-control" placeholder="e.g. Computer Science">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Batch</label>
+        <input type="text" name="batch" value="{{ filters.batch }}" class="form-control" placeholder="e.g. 2021-25">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Show Top</label>
+        <select name="top_n" class="form-select">
+          <option value="5"  {% if filters.top_n == 5  %}selected{% endif %}>Top 5</option>
+          <option value="10" {% if filters.top_n == 10 %}selected{% endif %}>Top 10</option>
+          <option value="20" {% if filters.top_n == 20 %}selected{% endif %}>Top 20</option>
+          <option value="50" {% if filters.top_n == 50 %}selected{% endif %}>Top 50</option>
+        </select>
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-funnel me-1"></i>Filter</button>
+        <a href="{% url 'toppers' %}" class="btn btn-outline-secondary">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Charts row -->
+<div class="row g-3 mb-4">
+  <!-- CGPA Distribution -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-bar-chart me-2" style="color:var(--primary)"></i>CGPA Distribution</div>
+      <div class="card-body">
+        <canvas id="cgpaDistChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Branch-wise Topper cards -->
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-diagram-3 me-2" style="color:var(--primary)"></i>Branch Toppers</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Branch</th><th>Topper</th><th>USN</th><th>CGPA</th><th>Backlogs</th><th></th></tr></thead>
+            <tbody>
+              {% for branch, t in branch_toppers.items %}
+              <tr>
+                <td><span class="badge-orange" style="font-size:.72rem;">{{ branch }}</span></td>
+                <td style="font-weight:600; font-size:.85rem;">
+                  <i class="bi bi-trophy-fill" style="color:#B8860B;"></i> {{ t.student.name }}
+                </td>
+                <td><code style="font-size:.75rem; color:var(--primary-dark);">{{ t.student.usn }}</code></td>
+                <td>
+                  <strong style="color:var(--success); font-size:.95rem;">{{ t.cgpa }}</strong>
+                </td>
+                <td>
+                  {% if t.backlogs == 0 %}
+                    <span class="badge-pass">None</span>
+                  {% else %}
+                    <span class="badge-fail">{{ t.backlogs }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a href="{% url 'student_profile' t.student.usn %}" class="btn btn-sm btn-outline-primary py-0 px-2">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" class="text-center py-3 text-muted" style="font-size:.84rem;">No data available</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Overall Top Students Table -->
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span><i class="bi bi-trophy me-2" style="color:#B8860B;"></i>Overall Top {{ filters.top_n }} Students — Ranked by CGPA</span>
+    <span style="font-size:.78rem; color:var(--text-muted);">{{ overall_top|length }} shown</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th style="width:60px;">Rank</th>
+            <th>USN</th>
+            <th>Name</th>
+            <th>Branch</th>
+            <th>Batch</th>
+            <th>CGPA</th>
+            <th>Best SGPA</th>
+            <th>Semesters</th>
+            <th>Backlogs</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in overall_top %}
+          <tr style="{% if forloop.counter == 1 %}background:rgba(184,134,11,0.07);{% elif forloop.counter == 2 %}background:rgba(102,102,102,0.07);{% elif forloop.counter == 3 %}background:rgba(139,69,19,0.07);{% endif %}">
+            <td>
+              {% if forloop.counter == 1 %}
+                <span style="font-size:1.1rem;">🥇</span>
+              {% elif forloop.counter == 2 %}
+                <span style="font-size:1.1rem;">🥈</span>
+              {% elif forloop.counter == 3 %}
+                <span style="font-size:1.1rem;">🥉</span>
+              {% else %}
+                <span style="font-size:.85rem; color:var(--text-muted); font-weight:600;">{{ forloop.counter }}</span>
+              {% endif %}
+            </td>
+            <td><code style="font-size:.78rem; color:var(--primary-dark);">{{ t.student.usn }}</code></td>
+            <td style="font-weight:{% if forloop.counter <= 3 %}700{% else %}500{% endif %}; font-size:.85rem;">
+              {{ t.student.name }}
+            </td>
+            <td><span class="badge-orange" style="font-size:.7rem;">{{ t.student.branch }}</span></td>
+            <td style="font-size:.82rem; color:var(--text-muted);">{{ t.student.batch }}</td>
+            <td>
+              <strong style="font-size:{% if forloop.counter <= 3 %}1rem{% else %}.9rem{% endif %};
+                color:{% if t.cgpa >= 9 %}var(--success){% elif t.cgpa >= 7 %}var(--warning){% else %}var(--text-main){% endif %};">
+                {{ t.cgpa }}
+              </strong>
+            </td>
+            <td style="font-size:.83rem;">{{ t.best_sgpa }}</td>
+            <td style="font-size:.83rem;">{{ t.sem_count }}</td>
+            <td>
+              {% if t.backlogs == 0 %}
+                <span class="badge-pass">Clean</span>
+              {% else %}
+                <span class="badge-fail">{{ t.backlogs }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'student_profile' t.student.usn %}" class="btn btn-sm btn-outline-primary py-0 px-2">
+                <i class="bi bi-eye"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10" class="text-center py-5 text-muted">
+              <i class="bi bi-trophy fs-2 d-block mb-2 opacity-30"></i>
+              No student data available. Upload results first.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const cgpaDist = {{ cgpa_dist_json|safe }};
+const GRID = 'rgba(234,216,204,0.6)';
+const COLORS = ['#2E8B57','#52BE80','#E8701A','#F5A264','#C0392B'];
+const TT = {
+  enabled: true,
+  backgroundColor: 'rgba(26,20,16,0.92)',
+  titleColor: '#F5A264', bodyColor: '#fff',
+  borderColor: 'rgba(232,112,26,0.45)', borderWidth: 1,
+  padding: 12, cornerRadius: 10, displayColors: true, boxPadding: 4,
+  titleFont: { size: 12, weight: '600' }, bodyFont: { size: 12 },
+};
+
+new Chart(document.getElementById('cgpaDistChart'), {
+  type: 'bar',
+  data: {
+    labels: cgpaDist.map(d => 'CGPA ' + d.range),
+    datasets: [{
+      label: 'Students',
+      data: cgpaDist.map(d => d.count),
+      backgroundColor: COLORS,
+      borderRadius: 7,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: { ...TT, callbacks: {
+        title: items => items[0].label,
+        label: ctx => `  Students: ${ctx.parsed.y}`
+      }}
+    },
+    scales: {
+      y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A', stepSize: 1 } },
+      x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A' } }
+    }
+  }
+});
+</script>
+{% endblock %}

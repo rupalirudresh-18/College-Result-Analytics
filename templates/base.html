@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Result Analytics{% endblock %} | Result Analytics</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary:       #E8701A;
+      --primary-dark:  #C45A10;
+      --primary-light: #F5A264;
+      --accent:        #F7C59F;
+      --bg:            #FDF8F4;
+      --bg-card:       #FFFFFF;
+      --sidebar-bg:    #1A1410;
+      --sidebar-text:  #E8D5C4;
+      --sidebar-hover: rgba(232,112,26,0.15);
+      --sidebar-active:#E8701A;
+      --text-main:     #2D1F14;
+      --text-muted:    #8B6E5A;
+      --border:        #EAD8CC;
+      --success:       #2E8B57;
+      --danger:        #C0392B;
+      --warning:       #E67E22;
+      --info:          #2980B9;
+      --glass-bg:      rgba(255,255,255,0.72);
+      --glass-border:  rgba(232,112,26,0.18);
+      --shadow:        0 4px 24px rgba(232,112,26,0.08);
+      --shadow-lg:     0 8px 40px rgba(232,112,26,0.14);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 260px;
+      min-height: 100vh;
+      background: var(--sidebar-bg);
+      position: fixed;
+      left: 0; top: 0;
+      z-index: 1040;
+      display: flex;
+      flex-direction: column;
+      transition: transform .3s ease;
+    }
+    #sidebar .brand {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    #sidebar .brand-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.18rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.25;
+    }
+    #sidebar .brand-sub {
+      font-size: 0.7rem;
+      color: var(--sidebar-text);
+      opacity: .6;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    #sidebar .brand-icon {
+      width: 36px; height: 36px;
+      background: var(--primary);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 10px;
+    }
+    .sidebar-section-label {
+      font-size: 0.65rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(232,213,196,.35);
+      padding: 18px 24px 6px;
+      font-weight: 600;
+    }
+    .sidebar-nav { padding: 0 12px; flex: 1; }
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      border-radius: 8px;
+      color: var(--sidebar-text);
+      text-decoration: none;
+      font-size: 0.855rem;
+      font-weight: 400;
+      margin-bottom: 2px;
+      transition: all .2s;
+    }
+    .sidebar-nav a:hover { background: var(--sidebar-hover); color: #fff; }
+    .sidebar-nav a.active { background: var(--primary); color: #fff; font-weight: 600; }
+    .sidebar-nav a i { font-size: 1rem; opacity: .85; width: 18px; }
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid rgba(255,255,255,.06);
+      font-size: .72rem;
+      color: rgba(232,213,196,.35);
+    }
+
+    /* ── Main wrapper ── */
+    #main-wrapper {
+      margin-left: 260px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0; z-index: 100;
+    }
+    .topbar-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.12rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+    .topbar-actions { display: flex; align-items: center; gap: 12px; }
+    .btn-topbar {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: .82rem;
+      color: var(--primary);
+      font-weight: 500;
+      text-decoration: none;
+      display: flex; align-items: center; gap: 6px;
+      transition: all .2s;
+      backdrop-filter: blur(8px);
+    }
+    .btn-topbar:hover {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    /* ── Page content ── */
+    .page-content { padding: 28px 32px; flex: 1; }
+
+    /* ── Cards ── */
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+    }
+    .card-header {
+      background: transparent;
+      border-bottom: 1px solid var(--border);
+      padding: 16px 22px;
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+    .card-body { padding: 22px; }
+
+    /* ── Glass card ── */
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    /* ── Stat cards ── */
+    .stat-card {
+      border-radius: 16px;
+      padding: 22px 24px;
+      border: 1px solid var(--border);
+      background: #fff;
+      box-shadow: var(--shadow);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .stat-card .stat-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      margin-bottom: 14px;
+    }
+    .stat-card .stat-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--text-main);
+    }
+    .stat-card .stat-label {
+      font-size: .8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+    .icon-orange  { background: rgba(232,112,26,.12); color: var(--primary); }
+    .icon-green   { background: rgba(46,139,87,.12);  color: var(--success); }
+    .icon-red     { background: rgba(192,57,43,.12);  color: var(--danger);  }
+    .icon-blue    { background: rgba(41,128,185,.12); color: var(--info);    }
+    .icon-purple  { background: rgba(142,68,173,.12); color: #8E44AD;        }
+
+    /* ── Tables ── */
+    .table { font-size: .85rem; }
+    .table thead th {
+      background: #FDF0E6;
+      color: var(--primary-dark);
+      font-weight: 600;
+      border-bottom: 2px solid var(--accent);
+      font-size: .78rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .table tbody tr:hover { background: #FDF8F4; }
+    .table td { vertical-align: middle; }
+
+    /* ── Badges ── */
+    .badge-pass   { background: rgba(46,139,87,.12);  color: var(--success); padding: 4px 10px; border-radius: 20px; font-size: .72rem; font-weight: 600; }
+    .badge-fail   { background: rgba(192,57,43,.12);  color: var(--danger);  padding: 4px 10px; border-radius: 20px; font-size: .72rem; font-weight: 600; }
+    .badge-orange { background: rgba(232,112,26,.12); color: var(--primary); padding: 4px 10px; border-radius: 20px; font-size: .72rem; font-weight: 600; }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      font-weight: 500;
+      border-radius: 8px;
+    }
+    .btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+    .btn-outline-primary {
+      color: var(--primary);
+      border-color: var(--primary);
+      border-radius: 8px;
+      font-weight: 500;
+    }
+    .btn-outline-primary:hover { background: var(--primary); color: #fff; }
+
+    /* ── Section titles ── */
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .section-sub {
+      color: var(--text-muted);
+      font-size: .87rem;
+    }
+
+    /* ── Progress bars ── */
+    .progress { border-radius: 20px; height: 8px; background: #F0E6DE; }
+    .progress-bar { background: var(--primary); border-radius: 20px; }
+    .progress-bar.bg-success { background: var(--success) !important; }
+    .progress-bar.bg-danger  { background: var(--danger) !important; }
+
+    /* ── Page header strip ── */
+    .page-header {
+      background: linear-gradient(135deg, #FDF0E6 0%, #FDF8F4 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin-bottom: 28px;
+    }
+    .page-header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    /* ── Alerts ── */
+    .alert { border-radius: 12px; font-size: .87rem; border: none; }
+    .alert-success { background: rgba(46,139,87,.1); color: #1a5c35; }
+    .alert-danger  { background: rgba(192,57,43,.1); color: #7b1a1a; }
+    .alert-info    { background: rgba(41,128,185,.1); color: #1a4a6b; }
+    .alert-warning { background: rgba(230,126,34,.1); color: #7b4a0a; }
+
+    /* ── Form controls ── */
+    .form-control, .form-select {
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: .875rem;
+      padding: 8px 12px;
+      background: #fff;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(232,112,26,.12);
+    }
+    .form-label { font-weight: 500; font-size: .84rem; color: var(--text-main); }
+
+    /* ── Upload drop zone ── */
+    .upload-zone {
+      border: 2px dashed var(--primary-light);
+      border-radius: 16px;
+      padding: 48px 24px;
+      text-align: center;
+      background: rgba(245,162,100,.04);
+      transition: all .2s;
+    }
+    .upload-zone:hover {
+      border-color: var(--primary);
+      background: rgba(232,112,26,.06);
+    }
+
+    /* ── Sidebar toggle for mobile ── */
+    #sidebarToggle {
+      display: none;
+      background: var(--primary);
+      border: none;
+      border-radius: 8px;
+      width: 38px; height: 38px;
+      color: #fff;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    /* ── Chart container ── */
+    .chart-container { position: relative; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f0e8e0; }
+    ::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 10px; }
+
+    @media (max-width: 992px) {
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.show { transform: translateX(0); }
+      #main-wrapper { margin-left: 0; }
+      #sidebarToggle { display: flex; align-items: center; justify-content: center; }
+      .page-content { padding: 20px 16px; }
+    }
+
+    /* Orange decorative dot */
+    .dot-accent {
+      display: inline-block;
+      width: 8px; height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    /* Breadcrumb */
+    .breadcrumb { font-size: .8rem; }
+    .breadcrumb-item + .breadcrumb-item::before { color: var(--text-muted); }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="brand">
+    <div class="brand-icon">
+      <i class="bi bi-mortarboard-fill text-white fs-5"></i>
+    </div>
+    <div class="brand-title">SJB Institute of Technology</div>
+    <div class="brand-sub">Academic Performance System</div>
+  </div>
+
+  <nav class="sidebar-nav mt-2">
+    <div class="sidebar-section-label">Overview</div>
+    <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+      <i class="bi bi-grid-1x2"></i> Dashboard
+    </a>
+
+    <div class="sidebar-section-label">Students</div>
+    <a href="{% url 'student_list' %}" class="{% if 'student' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="bi bi-people"></i> Student Records
+    </a>
+    <a href="{% url 'subject_list' %}" class="{% if 'subject' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="bi bi-book"></i> Subject Records
+    </a>
+    <a href="{% url 'upload_results' %}" class="{% if request.resolver_match.url_name == 'upload_results' %}active{% endif %}">
+      <i class="bi bi-cloud-arrow-up"></i> Upload Results
+    </a>
+
+    <div class="sidebar-section-label">Analysis</div>
+    <a href="{% url 'course_analysis' %}" class="{% if request.resolver_match.url_name == 'course_analysis' %}active{% endif %}">
+      <i class="bi bi-bar-chart-line"></i> Course Analysis
+    </a>
+    <a href="{% url 'category_analysis' %}" class="{% if request.resolver_match.url_name == 'category_analysis' %}active{% endif %}">
+      <i class="bi bi-pie-chart"></i> Category Analysis
+    </a>
+    <a href="{% url 'toppers' %}" class="{% if request.resolver_match.url_name == 'toppers' %}active{% endif %}">
+  <i class="bi bi-trophy"></i> Toppers
+</a>
+    <a href="{% url 'backlog_view' %}" class="{% if request.resolver_match.url_name == 'backlog_view' %}active{% endif %}">
+      <i class="bi bi-exclamation-triangle"></i> Backlog Tracker
+    </a>
+
+    <div class="sidebar-section-label">Reports</div>
+    <a href="{% url 'nba_report' %}" class="{% if request.resolver_match.url_name == 'nba_report' %}active{% endif %}">
+      <i class="bi bi-award"></i> NBA Metrics
+    </a>
+    <a href="{% url 'export_summary' %}">
+      <i class="bi bi-file-earmark-spreadsheet"></i> Export Summary
+    </a>
+    <a href="{% url 'export_pdf' %}">
+      <i class="bi bi-file-earmark-pdf"></i> Export PDF
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <i class="bi bi-circle-fill" style="color:var(--primary); font-size:.45rem; vertical-align:middle;"></i>
+    &nbsp;Result Analytics v1.0
+  </div>
+</nav>
+
+<!-- Main content -->
+<div id="main-wrapper">
+  <div class="topbar">
+    <div class="d-flex align-items-center gap-3">
+      <button id="sidebarToggle" onclick="document.getElementById('sidebar').classList.toggle('show')">
+        <i class="bi bi-list"></i>
+      </button>
+      <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
+    </div>
+    <div class="topbar-actions">
+      <a href="{% url 'upload_results' %}" class="btn-topbar">
+        <i class="bi bi-plus-lg"></i> Upload Results
+      </a>
+      <a href="{% url 'export_summary' %}" class="btn-topbar">
+        <i class="bi bi-download"></i> Export
+      </a>
+    </div>
+  </div>
+
+  <div class="page-content">
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show mb-3" role="alert">
+          {{ msg }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<!-- Custom chart loader -->
+<script src="/static/js/chart_loader.js"></script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

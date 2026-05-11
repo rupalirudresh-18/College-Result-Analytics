@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Grade Card — {{ student.usn }}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    color: #1a1a1a;
+    background: #fff;
+  }
+
+  /* ====== Decorative pink border (like the image) ====== */
+  .card {
+    border: 2px solid #d9577a;
+    padding: 14px 16px 18px 16px;
+    position: relative;
+    background:
+      repeating-linear-gradient(45deg,
+        transparent 0 8px,
+        rgba(217, 87, 122, 0.05) 8px 10px) ,
+      #fff;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border: 1px dashed #e58aa3;
+    pointer-events: none;
+  }
+
+  /* ====== Header ====== */
+  .header {
+    display: table;
+    width: 100%;
+    margin-bottom: 6px;
+  }
+  .header .logo-cell {
+    display: table-cell;
+    width: 80px;
+    vertical-align: middle;
+    text-align: center;
+  }
+  .header .logo-cell img {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+  }
+  .logo-placeholder {
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    border: 2px solid #c0392b;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 7pt; font-weight: bold; color: #c0392b;
+    line-height: 1.1; text-align: center;
+  }
+  .header .text-cell {
+    display: table-cell;
+    vertical-align: middle;
+    text-align: center;
+    padding: 0 8px;
+  }
+  .header .photo-cell {
+    display: table-cell;
+    width: 110px;
+    vertical-align: middle;
+    text-align: right;
+  }
+  .header .photo-cell img,
+  .photo-placeholder {
+    width: 95px;
+    height: 115px;
+    object-fit: cover;
+    border: 1px solid #999;
+    background: #f0f0f0;
+  }
+  .photo-placeholder {
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 8pt; color: #888;
+  }
+
+  .kannada {
+    font-size: 12pt;
+    font-weight: bold;
+    color: #1a1a1a;
+    margin-bottom: 2px;
+  }
+  .inst-name {
+    font-size: 16pt;
+    font-weight: bold;
+    color: #1f6fb2;
+    letter-spacing: 0.3px;
+    margin-bottom: 2px;
+  }
+  .inst-sub {
+    font-size: 8.5pt;
+    color: #333;
+    margin-bottom: 4px;
+  }
+  .grade-card-title {
+    font-size: 12pt;
+    font-weight: bold;
+    margin-top: 4px;
+  }
+  .program {
+    font-size: 10.5pt;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+
+  /* ====== Student info block ====== */
+  .info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8px;
+    font-size: 10pt;
+  }
+  .info-table td {
+    padding: 3px 4px;
+    vertical-align: top;
+  }
+  .info-table .lbl {
+    font-weight: bold;
+    width: 170px;
+  }
+  .info-table .colon { width: 10px; }
+
+  /* ====== Marks table ====== */
+  .marks {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+  }
+  .marks th, .marks td {
+    border: 1px solid #1a1a1a;
+    padding: 5px 6px;
+    text-align: center;
+  }
+  .marks thead th {
+    background: #fff;
+    font-weight: bold;
+    font-size: 9pt;
+  }
+  .marks td.course-title {
+    text-align: left;
+    padding-left: 8px;
+  }
+  .marks td.sl, .marks td.code {
+    white-space: nowrap;
+  }
+
+  /* Empty filler rows to mimic the long ruled section in the image */
+  .filler td { height: 22px; border: 1px solid #1a1a1a; }
+
+  /* ====== Summary footer rows ====== */
+  .summary {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+    margin-top: 0;
+  }
+  .summary td {
+    border: 1px solid #1a1a1a;
+    padding: 6px 8px;
+  }
+  .summary .lbl {
+    font-weight: bold;
+    width: 30%;
+  }
+  .summary .val {
+    width: 20%;
+    text-align: center;
+    font-weight: bold;
+  }
+
+  /* ====== Footer (date, signatures) ====== */
+  .foot {
+    display: table;
+    width: 100%;
+    margin-top: 22px;
+  }
+  .foot .cell {
+    display: table-cell;
+    width: 33.33%;
+    vertical-align: bottom;
+    text-align: center;
+    font-size: 9.5pt;
+  }
+  .foot .cell.left { text-align: left; }
+  .foot .cell.right { text-align: right; }
+  .sig-label { font-weight: bold; margin-top: 40px; }
+
+  .qr-row {
+    display: table;
+    width: 100%;
+    margin-top: 14px;
+  }
+  .qr-row .qr {
+    display: table-cell;
+    width: 80px;
+    vertical-align: bottom;
+  }
+  .qr-row .qr img { width: 70px; height: 70px; }
+  .qr-row .barcode {
+    display: table-cell;
+    vertical-align: bottom;
+    font-family: 'Libre Barcode 39', monospace;
+    font-size: 22pt;
+    letter-spacing: 1px;
+  }
+
+  .print-note {
+    background: #FFF3CD;
+    border: 1px solid #F5A264;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+    font-size: 9pt;
+  }
+  @media print {
+    .print-note { display: none; }
+    body { margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+
+{% for sd in semester_data %}
+<div class="card">
+
+  <!-- ============ HEADER ============ -->
+  <div class="header">
+    <div class="logo-cell">
+      {% if logo_url %}
+        <img src="{% static 'sjbit_logo.png' %}" alt="SJBIT Logo">
+      {% else %}
+        <div class="logo-placeholder">SJB<br>INSTITUTE<br>OF TECH</div>
+      {% endif %}
+    </div>
+    <div class="text-cell">
+      <div class="kannada">ಎಸ್ ಜೆ ಬಿ ತಾಂತ್ರಿಕ ಮಹಾವಿದ್ಯಾಲಯ, ಬೆಂಗಳೂರು – 560060</div>
+      <div class="inst-name">S J B Institute of Technology, Bengaluru - 560060</div>
+      <div class="inst-sub">(An Autonomous Institute under Visvesvaraya Technological University, Belagavi, Karnataka, India)</div>
+      <div class="grade-card-title">GRADE CARD</div>
+      <div class="program">Bachelor of Engineering in {{ student.branch }}</div>
+    </div>
+   </div>
+   
+  <!-- ============ STUDENT INFO ============ -->
+  <table class="info-table">
+    <tr>
+      <td class="lbl">Name of the Student</td><td class="colon">:</td>
+      <td>{{ student.name }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">University Seat No.(USN)</td><td class="colon">:</td>
+      <td>{{ student.usn }}</td>
+    </tr>
+    
+    <tr>
+      <td class="lbl">Semester</td><td class="colon">:</td>
+      <td>{{ sd.sem_result.semester_name|default:sd.sem_result.semester }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Month &amp; Year of Exam</td><td class="colon">:</td>
+      <td>{{ sd.sem_result.exam_month_year|default:sd.sem_result.academic_year }}</td>
+    </tr>
+  </table>
+
+  <!-- ============ MARKS TABLE ============ -->
+  <table class="marks">
+    <thead>
+      <tr>
+        <th rowspan="2" style="width:6%;">Sl. No.</th>
+        <th rowspan="2" style="width:14%;">Course Code</th>
+        <th rowspan="2" style="width:40%;">Course Title</th>
+        <th colspan="2">Credits</th>
+        <th rowspan="2" style="width:10%;">Grade Points</th>
+        <th rowspan="2" style="width:8%;">Grade</th>
+      </tr>
+      <tr>
+        <th style="width:11%;">Registered</th>
+        <th style="width:11%;">Earned</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in sd.results %}
+      <tr>
+  <td class="sl">{{ forloop.counter|stringformat:"02d" }}</td>
+  <td class="code">{{ r.subject.code }}</td>
+  <td class="course-title">{{ r.subject.name }}</td>
+  <td>{{ r.subject.credits|default:"—" }}</td>
+  <td>{{ r.computed_credits_earned|default:"—" }}</td>
+  <td>{{ r.grade_point|default:"—" }}</td>
+  <td>{{ r.grade|default:"—" }}</td>
+</tr>
+      {% empty %}
+      <tr><td colspan="7">No results available</td></tr>
+      {% endfor %}
+
+      {% with empty_rows="1,2,3,4,5,6,7,8"|make_list %}
+        {% for _ in empty_rows %}
+        <tr class="filler"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        {% endfor %}
+      {% endwith %}
+    </tbody>
+  </table>
+
+  <!-- ============ SUMMARY ============ -->
+  <table class="summary">
+    <tr>
+      <td class="lbl">Semester Credits Earned</td>
+      <td class="val">{{ sd.sem_result.credits_earned|default:"—" }}</td>
+      <td class="lbl">Semester Grade Point Average</td>
+      <td class="val">{{ sd.sem_result.sgpa|default:"—" }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Cumulative Credits Earned</td>
+      <td class="val">{{ cumulative_credits|default:"—" }}</td>
+      <td class="lbl">Cumulative Grade Point Average</td>
+      <td class="val">{{ cgpa|default:"—" }}</td>
+    </tr>
+  </table>
+
+  <!-- ============ SIGNATURES / FOOTER ============ -->
+  <div class="foot">
+    <div class="cell left">
+      <div class="qr-row">
+        <div class="qr">
+          {% if qr_url %}<img src="{{ qr_url }}" alt="QR">{% else %}<div style="width:70px;height:70px;border:1px solid #555;"></div>{% endif %}
+        </div>
+      </div>
+      <div style="margin-top:8px;">Date : {% now "d/m/Y" %}</div>
+      <div style="margin-top:6px; font-family: monospace; letter-spacing:2px;">
+        |||||||||||||||||||||||||||||<br>
+        {{ student.usn }}
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="sig-label">Controller of Examinations</div>
+    </div>
+
+    <div class="cell right">
+      <div class="sig-label">Principal</div>
+    </div>
+  </div>
+
+</div>
+
+{% if not forloop.last %}<div style="page-break-after: always;"></div>{% endif %}
+{% empty %}
+<p style="text-align:center; padding:40px;">No semester results available.</p>
+{% endfor %}
+
+</body>
+</html>

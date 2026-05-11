@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }}{% endblock %}
+{% block page_title %}Student Profile{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'student_list' %}" style="color:var(--primary);">Students</a></li>
+    <li class="breadcrumb-item active">{{ student.usn }}</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-end mb-3">
+  <a href="{% url 'export_student_pdf' student.usn %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-file-earmark-pdf me-1"></i>Export Student PDF Report
+  </a>
+</div>
+
+<div class="row g-4">
+  <!-- Profile Card -->
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-body text-center pt-4 pb-3">
+        <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-light));display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:1.7rem;font-family:'Playfair Display',serif;color:#fff;font-weight:700;">
+          {{ student.name|first }}
+        </div>
+        <h5 style="font-family:'Playfair Display',serif; font-weight:700; margin-bottom:2px;">{{ student.name }}</h5>
+        <code style="color:var(--primary); font-size:.9rem;">{{ student.usn }}</code>
+        <div class="mt-2">
+          <span class="badge-orange">{{ student.branch }}</span>
+          {% if student.section %}<span class="badge-orange ms-1">Sec {{ student.section }}</span>{% endif %}
+        </div>
+        <div class="row g-2 mt-3">
+          <div class="col-6">
+            <div style="background:#FDF0E6; border-radius:10px; padding:10px;">
+              <div style="font-size:1.5rem; font-weight:700; color:var(--primary); font-family:'Playfair Display',serif;">{{ cgpa }}</div>
+              <div style="font-size:.72rem; color:var(--text-muted); font-weight:500;">CGPA</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div style="background:{% if backlogs.count > 0 %}rgba(192,57,43,.06){% else %}rgba(46,139,87,.06){% endif %}; border-radius:10px; padding:10px;">
+              <div style="font-size:1.5rem; font-weight:700; color:{% if backlogs.count > 0 %}var(--danger){% else %}var(--success){% endif %}; font-family:'Playfair Display',serif;">{{ backlogs.count }}</div>
+              <div style="font-size:.72rem; color:var(--text-muted); font-weight:500;">Backlogs</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details -->
+    <div class="card mb-3">
+      <div class="card-header">Student Details</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" style="font-size:.82rem;">
+          <tr><td class="text-muted ps-3">Batch</td><td class="pe-3">{{ student.batch }}</td></tr>
+          <tr><td class="text-muted ps-3">Gender</td><td>{{ student.get_gender_display|default:"-" }}</td></tr>
+          <tr><td class="text-muted ps-3">Admission Quota</td><td>{{ student.admission_quota|default:"-" }}</td></tr>
+          <tr><td class="text-muted ps-3">Admission Type</td><td>{{ student.admission_type|default:"-" }}</td></tr>
+          <tr><td class="text-muted ps-3">Category</td><td>{{ student.actual_category|default:"-" }}</td></tr>
+          <tr><td class="text-muted ps-3">Seat Category</td><td>{{ student.seat_category_alloted|default:"-" }}</td></tr>
+          <tr><td class="text-muted ps-3">Domicile</td><td>{{ student.domicile_place|default:"-" }}, {{ student.domicile_state|default:"-" }}</td></tr>
+          <tr><td class="text-muted ps-3">CET Rank</td><td>{{ student.cet_rank|default:"-" }}</td></tr>
+          {% if student.achievements %}
+          <tr><td class="text-muted ps-3">Achievements</td><td style="font-size:.79rem;">{{ student.achievements }}</td></tr>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+
+    <!-- SGPA Chart -->
+    <div class="card">
+      <div class="card-header">SGPA Trend</div>
+      <div class="card-body">
+        <canvas id="sgpaTrendChart" height="180"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="col-lg-8">
+    <!-- Semester Results Summary -->
+    <div class="card mb-4">
+      <div class="card-header">Semester-wise Performance</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead>
+              <tr><th>Semester</th><th>Academic Year</th><th>SGPA</th><th>Credits Earned</th><th>Total Credits</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {% for sr in sem_results %}
+              <tr>
+                <td><strong>Semester {{ sr.semester }}</strong></td>
+                <td style="font-size:.82rem; color:var(--text-muted);">{{ sr.academic_year|default:"-" }}</td>
+                <td>
+                  <strong style="font-size:1rem; color:{% if sr.sgpa >= 8 %}var(--success){% elif sr.sgpa >= 6 %}var(--warning){% else %}var(--danger){% endif %}">
+                    {{ sr.sgpa }}
+                  </strong>
+                </td>
+                <td>{{ sr.credits_earned }}</td>
+                <td>{{ sr.total_credits }}</td>
+                <td>
+                  <span class="badge-{% if sr.pass_fail == 'P' %}pass{% else %}fail{% endif %}">
+                    {% if sr.pass_fail == 'P' %}Pass{% else %}Fail{% endif %}
+                  </span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" class="text-center text-muted py-3" style="font-size:.85rem;">No semester results available</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-Semester Subject Results -->
+    {% for sd in semester_data %}
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span>Semester {{ sd.sem_result.semester }} — Subject Results</span>
+        <span>SGPA: <strong style="color:var(--primary)">{{ sd.sem_result.sgpa }}</strong></span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr><th>Code</th><th>Subject</th><th>Credits</th><th>CIE</th><th>SEE</th><th>Total</th><th>Grade</th><th>GP</th><th>Result</th></tr>
+            </thead>
+            <tbody>
+              {% for r in sd.results %}
+              <tr>
+                <td><code style="font-size:.76rem; color:var(--primary-dark);">{{ r.subject.code }}</code></td>
+                <td style="font-size:.82rem;">{{ r.subject.name }}</td>
+                <td style="font-size:.82rem;">{{ r.subject.credits }}</td>
+                <td style="font-size:.82rem;">{{ r.cie_marks|default:"-" }}</td>
+                <td style="font-size:.82rem;">{{ r.see_marks|default:"-" }}</td>
+                <td style="font-size:.82rem; font-weight:500;">{{ r.total_marks|default:"-" }}</td>
+                <td><span class="badge-orange" style="font-size:.72rem;">{{ r.grade|default:"-" }}</span></td>
+                <td style="font-size:.82rem; font-weight:600;">{{ r.grade_point|default:"-" }}</td>
+                <td>
+                  <span class="badge-{% if r.pass_fail == 'P' %}pass{% elif r.pass_fail == 'F' %}fail{% else %}orange{% endif %}">
+                    {{ r.get_pass_fail_display }}
+                  </span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="9" class="text-center py-2 text-muted" style="font-size:.82rem;">No results</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="card">
+      <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-journal-x fs-2 d-block mb-3 opacity-30"></i>
+        No results uploaded for this student.
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Backlogs -->
+    {% if backlogs %}
+    <div class="card mt-3">
+      <div class="card-header" style="color:var(--danger);">
+        <i class="bi bi-exclamation-triangle me-2"></i>Backlog Subjects
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Subject Code</th><th>Subject Name</th><th>Semester</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for b in backlogs %}
+            <tr>
+              <td><code style="font-size:.78rem;">{{ b.subject.code }}</code></td>
+              <td style="font-size:.82rem;">{{ b.subject.name }}</td>
+              <td>Sem {{ b.semester }}</td>
+              <td>
+                <span class="badge-{% if b.cleared %}pass{% else %}fail{% endif %}">
+                  {% if b.cleared %}Cleared{% else %}Active{% endif %}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const sgpaData = {{ sgpa_trend_json|safe }};
+const GRID = 'rgba(234,216,204,0.6)';
+new Chart(document.getElementById('sgpaTrendChart'), {
+  type: 'line',
+  data: {
+    labels: sgpaData.map(d => 'Sem ' + d.sem),
+    datasets: [{
+      label: 'SGPA',
+      data: sgpaData.map(d => parseFloat(d.sgpa)),
+      borderColor: '#E8701A',
+      backgroundColor: 'rgba(232,112,26,0.12)',
+      borderWidth: 2.5,
+      pointBackgroundColor: '#E8701A',
+      pointRadius: 5,
+      fill: true,
+      tension: 0.35,
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { min: 0, max: 10, grid: { color: GRID }, border: { display: false }, ticks: { font: { size: 10 }, color: '#8B6E5A' } },
+      x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#8B6E5A' } }
+    }
+  }
+});
+</script>
+{% endblock %}

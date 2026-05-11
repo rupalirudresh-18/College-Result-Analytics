@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block title %}Course Analysis{% endblock %}
+{% block page_title %}Course Analysis{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1><span class="dot-accent"></span>Course Analysis</h1>
+    <p class="section-sub mb-0 mt-1">Branch-wise, semester-wise, and subject-wise academic performance</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'export_results' %}{% if filters.branch %}?branch={{ filters.branch }}{% endif %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-download me-1"></i>Export Results
+    </a>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Branch</label>
+        <input type="text" name="branch" value="{{ filters.branch }}" class="form-control" placeholder="e.g. Computer Science">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Semester</label>
+        <select name="semester" class="form-select">
+          <option value="">All</option>
+          {% for i in "12345678" %}
+          <option value="{{ i }}" {% if filters.semester == i %}selected{% endif %}>Sem {{ i }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Academic Year</label>
+        <input type="text" name="academic_year" value="{{ filters.academic_year }}" class="form-control" placeholder="e.g. 2022-23">
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-funnel me-1"></i>Apply</button>
+        <a href="{% url 'course_analysis' %}" class="btn btn-outline-secondary">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Branch-wise Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-bar-chart-line me-2" style="color:var(--primary)"></i>Branch-wise Pass % Comparison</div>
+      <div class="card-body">
+        <canvas id="branchPassChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-graph-up me-2" style="color:var(--primary)"></i>Semester-wise Avg SGPA</div>
+      <div class="card-body">
+        <canvas id="semSgpaChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Branch stats table -->
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-table me-2" style="color:var(--primary)"></i>Branch-wise Summary</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr><th>Branch</th><th>Students</th><th>Pass</th><th>Fail</th><th>Pass %</th><th>Avg SGPA</th><th>Pass Rate</th></tr>
+        </thead>
+        <tbody>
+          {% for b in branch_stats %}
+          <tr>
+            <td><span class="badge-orange">{{ b.student__branch }}</span></td>
+            <td>{{ b.total }}</td>
+            <td style="color:var(--success); font-weight:500;">{{ b.passes }}</td>
+            <td style="color:var(--danger); font-weight:500;">{{ b.total|add:"-"|add:b.passes }}</td>
+            <td>
+              <strong style="color:{% if b.pass_pct >= 80 %}var(--success){% elif b.pass_pct >= 60 %}var(--warning){% else %}var(--danger){% endif %}">
+                {{ b.pass_pct }}%
+              </strong>
+            </td>
+            <td><strong>{{ b.avg_sgpa }}</strong></td>
+            <td style="min-width:120px;">
+              <div class="progress">
+                <div class="progress-bar bg-success" style="width:{{ b.pass_pct }}%"></div>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center py-3 text-muted">No data available. Upload results first.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Semester stats table -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-calendar3 me-2" style="color:var(--primary)"></i>Semester-wise Summary</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Semester</th><th>Students</th><th>Pass %</th><th>Avg SGPA</th></tr></thead>
+          <tbody>
+            {% for s in sem_stats %}
+            <tr>
+              <td>Sem {{ s.semester }}</td>
+              <td>{{ s.total }}</td>
+              <td>
+                <span class="badge-{% if s.pass_pct >= 80 %}pass{% elif s.pass_pct >= 60 %}orange{% else %}fail{% endif %}">
+                  {{ s.pass_pct }}%
+                </span>
+              </td>
+              <td><strong>{{ s.avg_sgpa }}</strong></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3" style="font-size:.83rem;">No data</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-book me-2" style="color:var(--primary)"></i>Subject-wise Pass Analysis</div>
+      <div class="card-body p-0">
+        <div style="max-height:320px; overflow-y:auto;">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Code</th><th>Subject</th><th>Total</th><th>Pass %</th><th>Avg Marks</th></tr></thead>
+            <tbody>
+              {% for s in subject_stats %}
+              <tr>
+                <td><code style="font-size:.75rem; color:var(--primary-dark);">{{ s.subject__code }}</code></td>
+                <td style="font-size:.8rem;">{{ s.subject__name|truncatechars:35 }}</td>
+                <td>{{ s.total }}</td>
+                <td>
+                  <span class="badge-{% if s.pass_pct >= 80 %}pass{% elif s.pass_pct >= 60 %}orange{% else %}fail{% endif %}">
+                    {{ s.pass_pct }}%
+                  </span>
+                </td>
+                <td style="font-size:.82rem;">{{ s.avg_marks }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center text-muted py-3" style="font-size:.83rem;">No data</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const branchStats = {{ branch_stats_json|safe }};
+const semStats    = {{ sem_stats_json|safe }};
+const GRID = 'rgba(234,216,204,0.6)';
+
+new Chart(document.getElementById('branchPassChart'), {
+  type: 'bar',
+  data: {
+    labels: branchStats.map(d => d.student__branch),
+    datasets: [
+      { label: 'Pass %', data: branchStats.map(d => d.pass_pct), backgroundColor: '#2E8B57', borderRadius: 6 },
+      { label: 'Fail %', data: branchStats.map(d => d.fail_pct), backgroundColor: '#C0392B', borderRadius: 6 }
+    ]
+  },
+  options: { interaction: {
+  mode: 'index',
+  intersect: false
+},
+plugins: {
+  tooltip: {
+    enabled: true
+  }
+},
+    plugins: { legend: { position: 'bottom' } },
+    scales: {
+      y: { min: 0, max: 100, grid: { color: GRID }, border: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A' } },
+      x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('semSgpaChart'), {
+  type: 'line',
+  data: {
+    labels: semStats.map(d => 'Sem ' + d.semester),
+    datasets: [{
+      label: 'Avg SGPA',
+      data: semStats.map(d => d.avg_sgpa),
+      borderColor: '#E8701A',
+      backgroundColor: 'rgba(232,112,26,0.13)',
+      borderWidth: 2.5,
+      pointBackgroundColor: '#E8701A',
+      pointRadius: 5,
+      fill: true,
+      tension: 0.35,
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { min: 0, max: 10, grid: { color: GRID }, border: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A' } },
+      x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#8B6E5A' } }
+    }
+  }
+});
+</script>
+{% endblock %}
